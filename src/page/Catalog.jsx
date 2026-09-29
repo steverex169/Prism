@@ -1,6 +1,7 @@
 // Catalog.jsx
 
 import React, { useEffect, useMemo, useState } from "react";
+
 import {
   ChevronDown,
   Grid2X2,
@@ -12,7 +13,11 @@ import {
 import product1 from "../assets/product1.webp";
 import product2 from "../assets/product2.webp";
 
+import { useCart } from "../context/CartContext";
+
 const Catalog = () => {
+  const { addToCart } = useCart();
+
   const products = [
     {
       id: 1,
@@ -30,7 +35,10 @@ const Catalog = () => {
       title: "BPC-157",
       price: 81,
       image: product2,
-      available: false,
+
+      // change this to false whenever product becomes unavailable
+      available: true,
+
       createdAt: "2026-09-12",
       sales: 88,
       featured: true,
@@ -38,64 +46,101 @@ const Catalog = () => {
     },
   ];
 
-  const highestPrice = Math.max(...products.map((product) => product.price));
+  const highestPrice = Math.max(
+    ...products.map((product) => product.price)
+  );
 
   const [sortOpen, setSortOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
-  const [availabilityOpen, setAvailabilityOpen] = useState(false);
+
+  const [
+    availabilityOpen,
+    setAvailabilityOpen,
+  ] = useState(false);
 
   const [sortType, setSortType] = useState(() => {
-    return localStorage.getItem("catalogSort") || "relevant";
+    return (
+      localStorage.getItem("catalogSort") ||
+      "relevant"
+    );
   });
 
   const [viewMode, setViewMode] = useState(() => {
-    return localStorage.getItem("catalogView") || "normal";
+    return (
+      localStorage.getItem("catalogView") ||
+      "normal"
+    );
   });
 
   const [minPrice, setMinPrice] = useState(() => {
-    const saved = localStorage.getItem("catalogMinPrice");
+    const saved =
+      localStorage.getItem("catalogMinPrice");
+
     return saved !== null ? saved : "";
   });
 
   const [maxPrice, setMaxPrice] = useState(() => {
-    const saved = localStorage.getItem("catalogMaxPrice");
-    return saved !== null ? saved : highestPrice.toString();
+    const saved =
+      localStorage.getItem("catalogMaxPrice");
+
+    return saved !== null
+      ? saved
+      : highestPrice.toString();
   });
 
-  const [availability, setAvailability] = useState(() => {
-    const saved = localStorage.getItem("catalogAvailability");
+  const [availability, setAvailability] =
+    useState(() => {
+      const saved = localStorage.getItem(
+        "catalogAvailability"
+      );
 
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return {
-          inStock: false,
-          outOfStock: false,
-        };
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return {
+            inStock: false,
+            outOfStock: false,
+          };
+        }
       }
-    }
 
-    return {
-      inStock: false,
-      outOfStock: false,
-    };
-  });
+      return {
+        inStock: false,
+        outOfStock: false,
+      };
+    });
+
+  /* =========================
+     SAVE FILTERS
+  ========================== */
 
   useEffect(() => {
-    localStorage.setItem("catalogSort", sortType);
+    localStorage.setItem(
+      "catalogSort",
+      sortType
+    );
   }, [sortType]);
 
   useEffect(() => {
-    localStorage.setItem("catalogView", viewMode);
+    localStorage.setItem(
+      "catalogView",
+      viewMode
+    );
   }, [viewMode]);
 
   useEffect(() => {
-    localStorage.setItem("catalogMinPrice", minPrice);
+    localStorage.setItem(
+      "catalogMinPrice",
+      minPrice
+    );
   }, [minPrice]);
 
   useEffect(() => {
-    localStorage.setItem("catalogMaxPrice", maxPrice);
+    localStorage.setItem(
+      "catalogMaxPrice",
+      maxPrice
+    );
   }, [maxPrice]);
 
   useEffect(() => {
@@ -105,15 +150,24 @@ const Catalog = () => {
     );
   }, [availability]);
 
+  /* =========================
+     FILTER + SORT PRODUCTS
+  ========================== */
+
   const filteredProducts = useMemo(() => {
     let list = [...products];
 
-    // Price filter
+    /* Price filter */
+
     const min =
-      minPrice === "" ? 0 : Number(minPrice);
+      minPrice === ""
+        ? 0
+        : Number(minPrice);
 
     const max =
-      maxPrice === "" ? highestPrice : Number(maxPrice);
+      maxPrice === ""
+        ? highestPrice
+        : Number(maxPrice);
 
     list = list.filter(
       (product) =>
@@ -121,39 +175,47 @@ const Catalog = () => {
         product.price <= max
     );
 
-    // Availability filter
-    const { inStock, outOfStock } = availability;
+    /* Availability */
+
+    const { inStock, outOfStock } =
+      availability;
 
     if (inStock && !outOfStock) {
       list = list.filter(
-        (product) => product.available === true
+        (product) =>
+          product.available === true
       );
     }
 
     if (!inStock && outOfStock) {
       list = list.filter(
-        (product) => product.available === false
+        (product) =>
+          product.available === false
       );
     }
 
-    // Sort
+    /* Sorting */
+
     switch (sortType) {
       case "featured":
         list.sort(
           (a, b) =>
-            Number(b.featured) - Number(a.featured)
+            Number(b.featured) -
+            Number(a.featured)
         );
         break;
 
       case "relevant":
         list.sort(
-          (a, b) => a.relevance - b.relevance
+          (a, b) =>
+            a.relevance - b.relevance
         );
         break;
 
       case "best-selling":
         list.sort(
-          (a, b) => b.sales - a.sales
+          (a, b) =>
+            b.sales - a.sales
         );
         break;
 
@@ -171,13 +233,15 @@ const Catalog = () => {
 
       case "price-low":
         list.sort(
-          (a, b) => a.price - b.price
+          (a, b) =>
+            a.price - b.price
         );
         break;
 
       case "price-high":
         list.sort(
-          (a, b) => b.price - a.price
+          (a, b) =>
+            b.price - a.price
         );
         break;
 
@@ -211,6 +275,10 @@ const Catalog = () => {
     highestPrice,
   ]);
 
+  /* =========================
+     SORT OPTIONS
+  ========================== */
+
   const sortOptions = [
     ["featured", "Featured"],
     ["relevant", "Most relevant"],
@@ -228,7 +296,9 @@ const Catalog = () => {
       ([value]) => value === sortType
     );
 
-    return current ? current[1] : "Sort";
+    return current
+      ? current[1]
+      : "Sort";
   };
 
   return (
@@ -238,24 +308,32 @@ const Catalog = () => {
           mx-auto
           w-full
           max-w-[1440px]
+
           px-5
           py-10
+
           sm:px-6
           sm:py-12
+
           md:px-8
           md:py-14
+
           lg:px-10
           lg:py-16
+
           xl:px-12
+
           2xl:px-0
         "
       >
+        {/* Heading */}
         <h1
           className="
             text-[34px]
             font-bold
             tracking-[-0.025em]
             text-[#171728]
+
             sm:text-[40px]
             md:text-[46px]
             lg:text-[52px]
@@ -264,14 +342,19 @@ const Catalog = () => {
           Products
         </h1>
 
-        {/* Toolbar */}
+        {/* =========================
+            TOOLBAR
+        ========================== */}
+
         <div
           className="
             mt-14
             flex
             flex-col
             gap-5
+
             sm:mt-16
+
             md:flex-row
             md:items-center
             md:justify-between
@@ -280,7 +363,10 @@ const Catalog = () => {
           {/* Left Filters */}
           <div className="flex flex-wrap items-center gap-7">
 
-            {/* Availability */}
+            {/* =========================
+                AVAILABILITY
+            ========================== */}
+
             <div className="relative">
               <button
                 type="button"
@@ -288,11 +374,13 @@ const Catalog = () => {
                   setAvailabilityOpen(
                     (prev) => !prev
                   );
+
                   setPriceOpen(false);
                   setSortOpen(false);
                 }}
                 className="
                   flex
+                  cursor-pointer
                   items-center
                   gap-1.5
                   text-[14px]
@@ -301,15 +389,18 @@ const Catalog = () => {
                   transition-colors
                   duration-200
                   hover:text-black
+
                   sm:text-[15px]
                 "
               >
                 Availability
+
                 <ChevronDown
                   size={15}
                   strokeWidth={1.6}
                   className={`
                     transition-transform
+
                     ${
                       availabilityOpen
                         ? "rotate-180"
@@ -336,13 +427,22 @@ const Catalog = () => {
                   "
                 >
                   {/* In Stock */}
-                  <label className="flex cursor-pointer items-center gap-3 py-2">
+                  <label
+                    className="
+                      flex
+                      cursor-pointer
+                      items-center
+                      gap-3
+                      py-2
+                    "
+                  >
                     <button
                       type="button"
                       onClick={() =>
                         setAvailability(
                           (prev) => ({
                             ...prev,
+
                             inStock:
                               !prev.inStock,
                           })
@@ -352,6 +452,7 @@ const Catalog = () => {
                         flex
                         h-[18px]
                         w-[18px]
+                        cursor-pointer
                         items-center
                         justify-center
                         rounded-[3px]
@@ -378,13 +479,22 @@ const Catalog = () => {
                   </label>
 
                   {/* Out of Stock */}
-                  <label className="flex cursor-pointer items-center gap-3 py-2">
+                  <label
+                    className="
+                      flex
+                      cursor-pointer
+                      items-center
+                      gap-3
+                      py-2
+                    "
+                  >
                     <button
                       type="button"
                       onClick={() =>
                         setAvailability(
                           (prev) => ({
                             ...prev,
+
                             outOfStock:
                               !prev.outOfStock,
                           })
@@ -394,6 +504,7 @@ const Catalog = () => {
                         flex
                         h-[18px]
                         w-[18px]
+                        cursor-pointer
                         items-center
                         justify-center
                         rounded-[3px]
@@ -422,7 +533,10 @@ const Catalog = () => {
               )}
             </div>
 
-            {/* Price */}
+            {/* =========================
+                PRICE
+            ========================== */}
+
             <div className="relative">
               <button
                 type="button"
@@ -430,11 +544,13 @@ const Catalog = () => {
                   setPriceOpen(
                     (prev) => !prev
                   );
+
                   setAvailabilityOpen(false);
                   setSortOpen(false);
                 }}
                 className="
                   flex
+                  cursor-pointer
                   items-center
                   gap-1.5
                   text-[14px]
@@ -443,6 +559,7 @@ const Catalog = () => {
                   transition-colors
                   duration-200
                   hover:text-black
+
                   sm:text-[15px]
                 "
               >
@@ -453,6 +570,7 @@ const Catalog = () => {
                   strokeWidth={1.6}
                   className={`
                     transition-transform
+
                     ${
                       priceOpen
                         ? "rotate-180"
@@ -480,6 +598,7 @@ const Catalog = () => {
                   "
                 >
                   <div className="flex items-center gap-3">
+
                     {/* Minimum */}
                     <div
                       className="
@@ -574,8 +693,12 @@ const Catalog = () => {
             </div>
           </div>
 
-          {/* Right Controls */}
+          {/* =========================
+              RIGHT CONTROLS
+          ========================== */}
+
           <div className="flex flex-wrap items-center gap-4 sm:gap-5">
+
             <span className="text-[14px] text-[#666674] sm:text-[15px]">
               {filteredProducts.length} items
             </span>
@@ -588,11 +711,13 @@ const Catalog = () => {
                   setSortOpen(
                     (prev) => !prev
                   );
+
                   setPriceOpen(false);
                   setAvailabilityOpen(false);
                 }}
                 className="
                   flex
+                  cursor-pointer
                   items-center
                   gap-1.5
                   text-[14px]
@@ -600,16 +725,18 @@ const Catalog = () => {
                   transition-colors
                   duration-200
                   hover:text-black
+
                   sm:text-[15px]
                 "
               >
-                Sort
+                {getSortLabel()}
 
                 <ChevronDown
                   size={15}
                   strokeWidth={1.6}
                   className={`
                     transition-transform
+
                     ${
                       sortOpen
                         ? "rotate-180"
@@ -626,7 +753,7 @@ const Catalog = () => {
                     right-0
                     top-[30px]
                     z-50
-                    w-[200px]
+                    w-[220px]
                     overflow-hidden
                     rounded-[8px]
                     border
@@ -645,11 +772,15 @@ const Catalog = () => {
                           setSortType(
                             value
                           );
-                          setSortOpen(false);
+
+                          setSortOpen(
+                            false
+                          );
                         }}
                         className={`
                           flex
                           w-full
+                          cursor-pointer
                           items-center
                           gap-2
                           px-4
@@ -659,7 +790,8 @@ const Catalog = () => {
                           transition-colors
 
                           ${
-                            sortType === value
+                            sortType ===
+                            value
                               ? "bg-[#f0f0f2] text-[#40404e]"
                               : "text-[#555563] hover:bg-[#f7f7f8]"
                           }
@@ -683,9 +815,10 @@ const Catalog = () => {
               )}
             </div>
 
-            {/* Normal */}
+            {/* Normal Grid */}
             <button
               type="button"
+              aria-label="Normal grid"
               onClick={() =>
                 setViewMode("normal")
               }
@@ -693,6 +826,7 @@ const Catalog = () => {
                 flex
                 h-[30px]
                 w-[30px]
+                cursor-pointer
                 items-center
                 justify-center
                 rounded-[4px]
@@ -710,9 +844,10 @@ const Catalog = () => {
               />
             </button>
 
-            {/* Compact */}
+            {/* Compact Grid */}
             <button
               type="button"
+              aria-label="Compact grid"
               onClick={() =>
                 setViewMode("compact")
               }
@@ -720,6 +855,7 @@ const Catalog = () => {
                 flex
                 h-[30px]
                 w-[30px]
+                cursor-pointer
                 items-center
                 justify-center
                 rounded-[4px]
@@ -739,7 +875,10 @@ const Catalog = () => {
           </div>
         </div>
 
-        {/* Products */}
+        {/* =========================
+            PRODUCTS
+        ========================== */}
+
         <div
           className={`
             mt-7
@@ -751,16 +890,23 @@ const Catalog = () => {
                 ? `
                     grid-cols-1
                     gap-x-5
+
                     sm:grid-cols-2
+
                     lg:grid-cols-3
+
                     xl:grid-cols-4
                   `
                 : `
                     grid-cols-2
                     gap-x-4
+
                     sm:grid-cols-3
+
                     md:grid-cols-4
+
                     lg:grid-cols-5
+
                     xl:grid-cols-6
                   `
             }
@@ -777,6 +923,7 @@ const Catalog = () => {
                   bg-white
                   transition-all
                   duration-300
+
                   hover:-translate-y-[5px]
                   hover:shadow-[0_14px_35px_rgba(5,22,39,0.16)]
 
@@ -788,7 +935,16 @@ const Catalog = () => {
                   }
                 `}
               >
-                <div className="relative aspect-square overflow-hidden rounded-[12px] bg-[#f1f1f3]">
+                {/* Product Image */}
+                <div
+                  className="
+                    relative
+                    aspect-square
+                    overflow-hidden
+                    rounded-[12px]
+                    bg-[#f1f1f3]
+                  "
+                >
                   <img
                     src={product.image}
                     alt={product.title}
@@ -802,6 +958,28 @@ const Catalog = () => {
                     "
                   />
 
+                  {/* Availability */}
+                  {!product.available && (
+                    <div
+                      className="
+                        absolute
+                        left-3
+                        top-3
+                        rounded-full
+                        bg-white/95
+                        px-3
+                        py-1
+                        text-[11px]
+                        font-medium
+                        text-[#62626c]
+                        shadow-sm
+                      "
+                    >
+                      Out of stock
+                    </div>
+                  )}
+
+                  {/* Add To Cart */}
                   <div
                     className="
                       absolute
@@ -812,20 +990,55 @@ const Catalog = () => {
                   >
                     <button
                       type="button"
-                      className="
+                      disabled={
+                        !product.available
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        if (
+                          product.available
+                        ) {
+                          addToCart(
+                            product
+                          );
+                        }
+                      }}
+                      className={`
                         flex
                         h-[42px]
                         items-center
                         overflow-hidden
                         rounded-[9px]
-                        bg-[#17365c]
                         text-white
                         transition-all
                         duration-300
-                        group-hover:bg-[#20aaf2]
-                      "
+
+                        ${
+                          product.available
+                            ? `
+                                cursor-pointer
+                                bg-[#17365c]
+                                group-hover:bg-[#20aaf2]
+                              `
+                            : `
+                                cursor-not-allowed
+                                bg-[#9da4ad]
+                                opacity-80
+                              `
+                        }
+                      `}
                     >
-                      <span className="flex h-[42px] w-[42px] items-center justify-center">
+                      <span
+                        className="
+                          flex
+                          h-[42px]
+                          w-[42px]
+                          shrink-0
+                          items-center
+                          justify-center
+                        "
+                      >
                         <ShoppingBag
                           size={20}
                           strokeWidth={1.8}
@@ -833,28 +1046,42 @@ const Catalog = () => {
                       </span>
 
                       <span
-                        className="
-                          max-w-0
+                        className={`
                           overflow-hidden
                           whitespace-nowrap
-                          pr-0
                           text-[14px]
                           font-semibold
-                          opacity-0
                           transition-all
                           duration-300
 
-                          group-hover:max-w-[110px]
-                          group-hover:pr-4
-                          group-hover:opacity-100
-                        "
+                          ${
+                            product.available
+                              ? `
+                                  max-w-0
+                                  pr-0
+                                  opacity-0
+
+                                  group-hover:max-w-[120px]
+                                  group-hover:pr-4
+                                  group-hover:opacity-100
+                                `
+                              : `
+                                  max-w-[120px]
+                                  pr-4
+                                  opacity-100
+                                `
+                          }
+                        `}
                       >
-                        Add to cart
+                        {product.available
+                          ? "Add to cart"
+                          : "Out of stock"}
                       </span>
                     </button>
                   </div>
                 </div>
 
+                {/* Product Title */}
                 <h3
                   className={`
                     mt-3
@@ -863,7 +1090,8 @@ const Catalog = () => {
                     text-[#4e4e5c]
 
                     ${
-                      viewMode === "compact"
+                      viewMode ===
+                      "compact"
                         ? "text-[13px]"
                         : "text-[15px] sm:text-[16px]"
                     }
@@ -872,6 +1100,7 @@ const Catalog = () => {
                   {product.title}
                 </h3>
 
+                {/* Price */}
                 <p
                   className={`
                     mt-1
@@ -879,24 +1108,33 @@ const Catalog = () => {
                     text-[#173658]
 
                     ${
-                      viewMode === "compact"
+                      viewMode ===
+                      "compact"
                         ? "text-[12px]"
                         : "text-[14px] sm:text-[15px]"
                     }
                   `}
                 >
-                  ${product.price.toFixed(2)}
+                  $
+                  {product.price.toFixed(
+                    2
+                  )}
                 </p>
               </article>
             )
           )}
         </div>
 
-        {/* Empty State */}
-        {filteredProducts.length === 0 && (
+        {/* =========================
+            EMPTY STATE
+        ========================== */}
+
+        {filteredProducts.length ===
+          0 && (
           <div className="py-20 text-center">
             <p className="text-[16px] text-[#666674]">
-              No products match your selected filters.
+              No products match your
+              selected filters.
             </p>
           </div>
         )}
