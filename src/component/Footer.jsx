@@ -1,6 +1,7 @@
 // Footer.jsx
 
 import React from "react";
+import {Link} from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -81,19 +82,19 @@ const Footer = () => {
             </h3>
 
             <div className="mt-5 flex flex-col gap-4">
-              <a
-                href="#contact"
+              <Link
+                to="/contact"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Contact Us
-              </a>
+              </Link>
 
-              <a
-                href="#about"
+              <Link
+                to="/about"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 About Us
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -105,70 +106,70 @@ const Footer = () => {
 
             <div className="mt-5 flex flex-col gap-4">
               <a
-                href="#faq"
+                href="/#faq"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 FAQs
               </a>
 
               <a
-                href="#"
+                href="/terms"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Terms & Conditions
               </a>
 
               <a
-                href="#"
+                href="/privacy"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Privacy Policy
               </a>
 
               <a
-                href="#"
+                href="/refund"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Refund & Return Policy
               </a>
 
               <a
-                href="#"
+                href="/shipping"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Shipping & Delivery Policy
               </a>
 
               <a
-                href="#"
+                href="/quality"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Quality Assurance
               </a>
 
               <a
-                href="#"
+                href="/third"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Third-Party Testing
               </a>
 
               <a
-                href="#"
+                href="/certificate"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Certificates of Analysis
               </a>
 
               <a
-                href="#"
+                href="/manufacturing"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Manufacturing Standards
               </a>
 
               <a
-                href="#"
+                href="/compliance"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Compliance Statement

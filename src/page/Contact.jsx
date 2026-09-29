@@ -50,6 +50,7 @@ const Contact = () => {
         style={{
           backgroundImage: `url(${contactData.backgroundImage})`,
         }}
+        id="contact"
       >
         <div
           className="

@@ -1,0 +1,25 @@
+import React from "react";
+
+const Manufacturing = () => {
+  return (
+    <main className="flex min-h-[70vh] w-full items-center justify-center bg-white px-5 py-16 font-sans sm:px-6 md:px-8 lg:px-10">
+      <section className="w-full max-w-[900px] text-center">
+        <h1 className="text-[32px] font-bold tracking-[-0.03em] text-[#17182a] sm:text-[38px] md:text-[44px]">
+          Manufacturing Standards
+        </h1>
+
+        <p className="mx-auto mt-6 max-w-[820px] text-[15px] leading-[1.9] text-[#697181] sm:text-[16px]">
+          Our products are manufactured by partners operating under strict quality standards.
+        </p>
+
+        <div className="mx-auto mt-8 max-w-[820px] space-y-5 text-[15px] leading-[1.9] text-[#697181] sm:text-[16px]">
+          <p><strong className="text-[#27364a]">GMP-compliant facilities</strong> — manufacturing follows documented good manufacturing practices.</p>
+          <p><strong className="text-[#27364a]">Controlled processes</strong> — defined procedures for raw-material verification, production, and lot tracking.</p>
+          <p><strong className="text-[#27364a]">Quality release</strong> — no batch ships until third-party laboratory results meet specification.</p>
+        </div>
+      </section>
+    </main>
+  );
+};
+
+export default Manufacturing;
