@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import {Link} from "react-router-dom"
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -65,26 +66,26 @@ const Header = () => {
               xl:gap-8
             "
           >
-            <a
-              href="#"
+            <Link
+              to="/"
               className="text-[14px] font-normal text-[#3f3f3f] transition-colors duration-200 hover:text-black"
             >
               Home
-            </a>
+            </Link>
 
-            <a
-              href="#"
+            <Link
+              to="/catalog"
               className="text-[14px] font-normal text-[#3f3f3f] transition-colors duration-200 hover:text-black"
             >
               Catalog
-            </a>
+            </Link>
 
-            <a
-              href="#"
+            <Link
+              to="/contact"
               className="text-[14px] font-normal text-[#3f3f3f] transition-colors duration-200 hover:text-black"
             >
               Contact
-            </a>
+            </Link>
           </nav>
         </div>
 
@@ -162,29 +163,29 @@ const Header = () => {
         `}
       >
         <nav className="flex flex-col px-4 py-3 sm:px-6">
-          <a
-            href="#"
+          <Link
+            to="/"
             onClick={() => setMenuOpen(false)}
             className="py-3 text-[14px] text-[#3f3f3f]"
           >
             Home
-          </a>
+          </Link>
 
-          <a
-            href="#"
+          <Link
+            to="/catalog"
             onClick={() => setMenuOpen(false)}
             className="py-3 text-[14px] text-[#3f3f3f]"
           >
             Catalog
-          </a>
+          </Link>
 
-          <a
-            href="#"
+          <Link
+            to="/contact"
             onClick={() => setMenuOpen(false)}
             className="py-3 text-[14px] text-[#3f3f3f]"
           >
             Contact
-          </a>
+          </Link>
         </nav>
       </div>
     </header>

@@ -59,8 +59,6 @@ const Main_page = () => {
 
   return (
     <>
-      <Header />
-
       <section
         className="
           relative
@@ -926,7 +924,6 @@ const Main_page = () => {
           </div>
         </div>
       </section>
-      <Footer/>
     </>
   );
 };
