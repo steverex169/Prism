@@ -1,7 +1,8 @@
-// Footer.jsx
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
@@ -11,7 +12,9 @@ const Footer = () => {
   const handleSubscribe = async (e) => {
     e.preventDefault();
 
-    if (!email) {
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedEmail) {
       setMessage("Please enter your email.");
       return;
     }
@@ -20,33 +23,80 @@ const Footer = () => {
       setLoading(true);
       setMessage("");
 
-      const response = await fetch("http://localhost:8000/email/save-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email_address: email,
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/email/save-email`,
+        {
+          method: "POST",
 
-      const data = await response.json();
+          credentials: "include",
 
-      if (!response.ok) {
-        throw new Error(data.detail || "Something went wrong");
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            email_address: trimmedEmail,
+          }),
+        }
+      );
+
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      let data = {};
+
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+
+        data = {
+          detail: text || "Unexpected server response.",
+        };
       }
 
-      setMessage("Subscribed successfully!");
+      if (!response.ok) {
+        let errorMessage =
+          "Something went wrong. Please try again.";
+
+        if (Array.isArray(data.detail)) {
+          errorMessage = data.detail
+            .map((item) =>
+              typeof item === "string"
+                ? item
+                : item.msg || "Invalid information."
+            )
+            .join(" ");
+        } else if (typeof data.detail === "string") {
+          errorMessage = data.detail;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      setMessage(
+        data.message || "Subscribed successfully!"
+      );
+
       setEmail("");
     } catch (error) {
-      setMessage(error.message);
+      if (error instanceof TypeError) {
+        setMessage(
+          "Unable to connect to the server. Please try again."
+        );
+      } else {
+        setMessage(
+          error.message ||
+            "Something went wrong. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <footer className="relative w-full overflow-hidden bg-[#061727] text-[#f7e8d0]">
-
       {/* Light Grid Background */}
       <div
         className="
@@ -152,68 +202,68 @@ const Footer = () => {
                 FAQs
               </a>
 
-              <a
-                href="/terms"
+              <Link
+                to="/terms"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Terms & Conditions
-              </a>
+              </Link>
 
-              <a
-                href="/privacy"
+              <Link
+                to="/privacy"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Privacy Policy
-              </a>
+              </Link>
 
-              <a
-                href="/refund"
+              <Link
+                to="/refund"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Refund & Return Policy
-              </a>
+              </Link>
 
-              <a
-                href="/shipping"
+              <Link
+                to="/shipping"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Shipping & Delivery Policy
-              </a>
+              </Link>
 
-              <a
-                href="/quality"
+              <Link
+                to="/quality"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Quality Assurance
-              </a>
+              </Link>
 
-              <a
-                href="/third"
+              <Link
+                to="/third"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Third-Party Testing
-              </a>
+              </Link>
 
-              <a
-                href="/certificate"
+              <Link
+                to="/certificate"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Certificates of Analysis
-              </a>
+              </Link>
 
-              <a
-                href="/manufacturing"
+              <Link
+                to="/manufacturing"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Manufacturing Standards
-              </a>
+              </Link>
 
-              <a
-                href="/compliance"
+              <Link
+                to="/compliance"
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
                 Compliance Statement
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -231,45 +281,52 @@ const Footer = () => {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setMessage("");
+                }}
+                autoComplete="email"
                 required
+                disabled={loading}
                 className="
-      h-[44px]
-      min-w-0
-      flex-1
-      border
-      border-[#4c5863]
-      bg-[#223344]
-      px-4
-      text-[13px]
-      text-white
-      outline-none
-      placeholder:text-[#9ca5ad]
-      focus:border-[#00a4d8]
-      sm:text-[14px]
-    "
+                  h-[44px]
+                  min-w-0
+                  flex-1
+                  border
+                  border-[#4c5863]
+                  bg-[#223344]
+                  px-4
+                  text-[13px]
+                  text-white
+                  outline-none
+                  placeholder:text-[#9ca5ad]
+                  focus:border-[#00a4d8]
+                  disabled:cursor-not-allowed
+                  disabled:opacity-70
+                  sm:text-[14px]
+                "
               />
 
               <button
                 type="submit"
                 disabled={loading}
                 className="
-      h-[44px]
-      shrink-0
-      bg-[#0ea6d8]
-      px-5
-      text-[13px]
-      font-bold
-      uppercase
-      text-white
-      transition-colors
-      duration-200
-      hover:bg-[#1296c0]
-      disabled:cursor-not-allowed
-      disabled:opacity-60
-      sm:px-6
-      sm:text-[14px]
-    "
+                  h-[44px]
+                  shrink-0
+                  bg-[#0ea6d8]
+                  px-5
+                  text-[13px]
+                  font-bold
+                  uppercase
+                  text-white
+                  transition-colors
+                  duration-200
+                  hover:bg-[#1296c0]
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
+                  sm:px-6
+                  sm:text-[14px]
+                "
               >
                 {loading ? "Saving..." : "Sign Up"}
               </button>

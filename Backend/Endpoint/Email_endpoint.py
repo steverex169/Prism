@@ -1,8 +1,17 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
+
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
-from pydantic import BaseModel
+from sqlalchemy.exc import (
+    IntegrityError,
+    SQLAlchemyError,
+)
+
+from pydantic import BaseModel, EmailStr
 
 from Model import Email_model
 from Database import get_db
@@ -13,17 +22,63 @@ router = APIRouter(
     tags=["Email"]
 )
 
-class Email(BaseModel):
-    email_address: str
+
+class EmailRequest(BaseModel):
+    email_address: EmailStr
+
 
 @router.post("/save-email")
-async def save_email(email: Email, db: Session = Depends(get_db)):
+def save_email(
+    email: EmailRequest,
+    db: Session = Depends(get_db),
+):
+    normalized_email = (
+        email.email_address
+        .lower()
+        .strip()
+    )
+
     try:
-        new_email = Email_model.Email(email_address=email.email_address)
+        existing_email = (
+            db.query(Email_model.Email)
+            .filter(
+                Email_model.Email.email_address
+                == normalized_email
+            )
+            .first()
+        )
+
+        if existing_email:
+            return {
+                "message": "You are already subscribed."
+            }
+
+        new_email = Email_model.Email(
+            email_address=normalized_email
+        )
+
         db.add(new_email)
         db.commit()
         db.refresh(new_email)
-        return {"message": "Email saved successfully", "email_id": new_email.id}
-    except SQLAlchemyError as e:
+
+        return {
+            "message": "Subscribed successfully!",
+            "email_id": new_email.id,
+        }
+
+    except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to save email")
+
+        return {
+            "message": "You are already subscribed."
+        }
+
+    except SQLAlchemyError as error:
+        db.rollback()
+
+        print("DATABASE ERROR:", error)
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save email.",
+        )
