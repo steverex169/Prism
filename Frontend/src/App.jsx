@@ -17,6 +17,7 @@ import Third from './page/Third.jsx'
 import Certificate from './page/Certificate.jsx'
 import Manufacturing from './page/Manufacturing.jsx'
 import Compliance from './page/Compliance.jsx'
+import Signin from './page/Signin.jsx'
 
 const App = () => {
   return (
@@ -25,6 +26,7 @@ const App = () => {
       <Top_Header />
       <Header/>
       <Routes>
+        <Route path="/signup" element={<Signin />} />
         <Route path="/" element={<Main_page />} />
         <Route path="/catalog" element={<Catalog />} />
         <Route path="/contact" element={<Contact />} />

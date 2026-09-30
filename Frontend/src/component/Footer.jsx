@@ -1,9 +1,49 @@
 // Footer.jsx
 
-import React from "react";
-import {Link} from "react-router-dom";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+
+    if (!email) {
+      setMessage("Please enter your email.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const response = await fetch("http://localhost:8000/email/save-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email_address: email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Something went wrong");
+      }
+
+      setMessage("Subscribed successfully!");
+      setEmail("");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <footer className="relative w-full overflow-hidden bg-[#061727] text-[#f7e8d0]">
 
@@ -183,48 +223,63 @@ const Footer = () => {
               Subscribe to our email
             </h3>
 
-            <form className="mt-5 flex w-full max-w-[320px]">
+            <form
+              onSubmit={handleSubscribe}
+              className="mt-5 flex w-full max-w-[320px]"
+            >
               <input
                 type="email"
                 placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="
-                  h-[44px]
-                  min-w-0
-                  flex-1
-                  border
-                  border-[#4c5863]
-                  bg-[#223344]
-                  px-4
-                  text-[13px]
-                  text-white
-                  outline-none
-                  placeholder:text-[#9ca5ad]
-                  focus:border-[#00a4d8]
-                  sm:text-[14px]
-                "
+      h-[44px]
+      min-w-0
+      flex-1
+      border
+      border-[#4c5863]
+      bg-[#223344]
+      px-4
+      text-[13px]
+      text-white
+      outline-none
+      placeholder:text-[#9ca5ad]
+      focus:border-[#00a4d8]
+      sm:text-[14px]
+    "
               />
 
               <button
                 type="submit"
+                disabled={loading}
                 className="
-                  h-[44px]
-                  shrink-0
-                  bg-[#0ea6d8]
-                  px-5
-                  text-[13px]
-                  font-bold
-                  uppercase
-                  text-white
-                  transition-colors
-                  duration-200
-                  hover:bg-[#1296c0]
-                  sm:px-6
-                  sm:text-[14px]
-                "
+      h-[44px]
+      shrink-0
+      bg-[#0ea6d8]
+      px-5
+      text-[13px]
+      font-bold
+      uppercase
+      text-white
+      transition-colors
+      duration-200
+      hover:bg-[#1296c0]
+      disabled:cursor-not-allowed
+      disabled:opacity-60
+      sm:px-6
+      sm:text-[14px]
+    "
               >
-                Sign Up
+                {loading ? "Saving..." : "Sign Up"}
               </button>
             </form>
+
+            {message && (
+              <p className="mt-3 text-[13px] text-[#9b9d9f]">
+                {message}
+              </p>
+            )}
           </div>
         </div>
 

@@ -9,8 +9,8 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useCart } from "../context/CartContext";
 
@@ -20,9 +20,14 @@ import product2 from "../assets/product2.webp";
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const [user, setUser] = useState(null);
 
   const {
     cartItems,
@@ -63,6 +68,31 @@ const Header = () => {
   const closeSearch = () => {
     setSearchOpen(false);
     setSearchQuery("");
+  };
+
+  useEffect(() => {
+    try {
+      const storedUser = sessionStorage.getItem("user");
+      const token = sessionStorage.getItem("access_token");
+
+      if (storedUser && token) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        setUser(null);
+      }
+    } catch {
+      setUser(null);
+    }
+  }, [location.pathname]);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("access_token");
+    sessionStorage.removeItem("user");
+
+    setUser(null);
+    setProfileOpen(false);
+
+    navigate("/");
   };
 
   return (
@@ -204,29 +234,48 @@ const Header = () => {
             </button>
 
             {/* Profile */}
-            <button
-              type="button"
-              aria-label="Profile"
-              onClick={() => {
-                setProfileOpen(true);
-                setSearchOpen(false);
-                setCartOpen(false);
-              }}
-              className="
-                hidden
-                cursor-pointer
-                items-center
-                justify-center
-                text-black
-                transition-opacity
-                duration-200
-                hover:opacity-60
-
-                sm:flex
-              "
-            >
-              <UserRound size={19} strokeWidth={1.8} />
-            </button>
+            <div className="relative hidden sm:block">
+              {user ? (
+                <button
+                  type="button"
+                  aria-label="Profile"
+                  onClick={() => {
+                    setProfileOpen((prev) => !prev);
+                    setSearchOpen(false);
+                    setCartOpen(false);
+                  }}
+                  className="
+        flex
+        cursor-pointer
+        items-center
+        justify-center
+        text-black
+        transition-opacity
+        duration-200
+        hover:opacity-60
+      "
+                >
+                  <UserRound size={19} strokeWidth={1.8} />
+                </button>
+              ) : (
+                <Link
+                  to="/signup"
+                  aria-label="Profile"
+                  className="
+        flex
+        cursor-pointer
+        items-center
+        justify-center
+        text-black
+        transition-opacity
+        duration-200
+        hover:opacity-60
+      "
+                >
+                  <UserRound size={19} strokeWidth={1.8} />
+                </Link>
+              )}
+            </div>
 
             {/* Cart */}
             <button
@@ -235,7 +284,6 @@ const Header = () => {
               onClick={() => {
                 setCartOpen(true);
                 setSearchOpen(false);
-                setProfileOpen(false);
               }}
               className="
                 relative
@@ -313,10 +361,9 @@ const Header = () => {
             duration-300
             md:hidden
 
-            ${
-              menuOpen
-                ? "max-h-[220px] border-t border-black/10 opacity-100"
-                : "max-h-0 opacity-0"
+            ${menuOpen
+              ? "max-h-[220px] border-t border-black/10 opacity-100"
+              : "max-h-0 opacity-0"
             }
           `}
         >
@@ -347,6 +394,125 @@ const Header = () => {
           </nav>
         </div>
       </header>
+
+      {/* ================= USER PROFILE DROPDOWN ================= */}
+
+      {user && profileOpen && (
+        <>
+          {/* Click outside */}
+          <div
+            className="fixed inset-0 z-[998]"
+            onClick={() => setProfileOpen(false)}
+          />
+
+          <div
+            className="
+        fixed
+        right-4
+        top-[100px]
+        z-[999]
+
+        w-[calc(100%-32px)]
+        max-w-[330px]
+
+        overflow-hidden
+        rounded-[14px]
+
+        border
+        border-[#e3e6ea]
+
+        bg-white
+
+        shadow-[0_18px_50px_rgba(0,0,0,0.18)]
+
+        sm:right-6
+        md:right-8
+        lg:right-10
+        xl:right-12
+      "
+          >
+            {/* User Info */}
+            <div className="px-5 py-5">
+              <div className="flex items-center gap-3">
+                {/* Avatar */}
+                <div
+                  className="
+              flex
+              h-[46px]
+              w-[46px]
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              bg-[#e8f6fb]
+              text-[#0ea6d8]
+            "
+                >
+                  <UserRound size={22} strokeWidth={1.8} />
+                </div>
+
+                <div className="min-w-0">
+                  <p
+                    className="
+                truncate
+                text-[15px]
+                font-semibold
+                text-[#17182a]
+              "
+                  >
+                    {user.full_name}
+                  </p>
+
+                  <p
+                    className="
+                mt-0.5
+                truncate
+                text-[13px]
+                text-[#737b87]
+              "
+                  >
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-[#e5e7eb]" />
+
+            {/* Logout */}
+            <div className="p-3">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="
+            flex
+            h-[44px]
+            w-full
+            cursor-pointer
+            items-center
+            justify-center
+
+            rounded-[8px]
+
+            bg-[#061727]
+
+            text-[14px]
+            font-semibold
+            text-white
+
+            transition-colors
+            duration-200
+
+            hover:bg-[#102b42]
+          "
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ================= SEARCH POPUP ================= */}
 
@@ -535,241 +701,6 @@ const Header = () => {
                   No products found.
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= PROFILE POPUP ================= */}
-
-      {profileOpen && (
-        <div
-          className="
-            fixed
-            inset-0
-            z-[999]
-            bg-[#061727]/50
-          "
-          onClick={() => setProfileOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="
-              absolute
-              right-3
-              top-[78px]
-              w-[calc(100%-24px)]
-              max-w-[360px]
-              rounded-[22px]
-              bg-white
-              p-4
-              shadow-[0_20px_55px_rgba(0,0,0,0.24)]
-
-              sm:right-6
-              sm:w-[360px]
-
-              md:right-8
-              lg:right-10
-              xl:right-12
-
-              2xl:right-[max(20px,calc((100vw-1456px)/2))]
-            "
-          >
-            {/* Profile Header */}
-            <div className="flex items-center justify-between">
-              <h2
-                className="
-                  text-[18px]
-                  font-bold
-                  leading-tight
-                  text-[#1c2134]
-                  sm:text-[20px]
-                "
-              >
-                Sign in or create account
-              </h2>
-
-              <button
-                type="button"
-                aria-label="Close profile"
-                onClick={() => setProfileOpen(false)}
-                className="
-                  flex
-                  h-[40px]
-                  w-[40px]
-                  cursor-pointer
-                  items-center
-                  justify-center
-                  rounded-full
-                  border-[3px]
-                  border-[#9497a1]
-                  text-[#252b39]
-                  transition-colors
-                  hover:bg-[#f4f4f5]
-                "
-              >
-                <X size={19} strokeWidth={2} />
-              </button>
-            </div>
-
-            {/* Shop Login */}
-            <button
-              type="button"
-              className="
-                mt-4
-                flex
-                h-[48px]
-                w-full
-                cursor-pointer
-                items-center
-                justify-center
-                rounded-[14px]
-                bg-[#5433ed]
-                text-[14px]
-                font-semibold
-                text-white
-                transition-colors
-                hover:bg-[#4525dd]
-              "
-            >
-              Sign in with shop
-            </button>
-
-            {/* Divider */}
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-[#d9dce2]" />
-
-              <span
-                className="
-                  text-[11px]
-                  uppercase
-                  text-[#9296a0]
-                "
-              >
-                OR
-              </span>
-
-              <div className="h-px flex-1 bg-[#d9dce2]" />
-            </div>
-
-            {/* Email */}
-            <div
-              className="
-                flex
-                h-[52px]
-                items-center
-                overflow-hidden
-                rounded-[14px]
-                border
-                border-[#d9dce2]
-              "
-            >
-              <input
-                type="email"
-                placeholder="Email"
-                className="
-                  h-full
-                  min-w-0
-                  flex-1
-                  bg-transparent
-                  px-4
-                  text-[15px]
-                  text-[#232938]
-                  outline-none
-                  placeholder:text-[#8b8f98]
-                "
-              />
-
-              <button
-                type="button"
-                aria-label="Continue with email"
-                className="
-                  flex
-                  h-full
-                  w-[54px]
-                  cursor-pointer
-                  items-center
-                  justify-center
-                  text-[#697181]
-                  transition-colors
-                  hover:text-[#1294ff]
-                "
-              >
-                →
-              </button>
-            </div>
-
-            {/* Newsletter */}
-            <label
-              className="
-                mt-3
-                flex
-                cursor-pointer
-                items-center
-                gap-3
-                text-[14px]
-                text-[#4e5565]
-              "
-            >
-              <input
-                type="checkbox"
-                className="
-                  h-[14px]
-                  w-[14px]
-                  cursor-pointer
-                "
-              />
-
-              <span>Email me with news and offers</span>
-            </label>
-
-            {/* Buttons */}
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                className="
-                  flex
-                  h-[48px]
-                  cursor-pointer
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-[14px]
-                  border
-                  border-[#d9dce2]
-                  text-[14px]
-                  font-medium
-                  text-[#3a4050]
-                  transition-colors
-                  hover:bg-[#f8f9fa]
-                "
-              >
-                <ShoppingBag size={16} strokeWidth={1.8} />
-                Orders
-              </button>
-
-              <button
-                type="button"
-                className="
-                  flex
-                  h-[48px]
-                  cursor-pointer
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-[14px]
-                  border
-                  border-[#d9dce2]
-                  text-[14px]
-                  font-medium
-                  text-[#3a4050]
-                  transition-colors
-                  hover:bg-[#f8f9fa]
-                "
-              >
-                <UserRound size={16} strokeWidth={1.8} />
-                Profile
-              </button>
             </div>
           </div>
         </div>

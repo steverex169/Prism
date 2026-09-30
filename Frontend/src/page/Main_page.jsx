@@ -1,9 +1,7 @@
 import React, { useState } from "react";
-import Header from "../component/Header";
 import heroImage from "../assets/bgImg.jpg";
 import prismQuality from "../assets/prisim-quality.webp";
 import { Plus, X } from "lucide-react";
-import Footer from "../component/Footer";
 
 const Main_page = () => {
   const heroData = {
