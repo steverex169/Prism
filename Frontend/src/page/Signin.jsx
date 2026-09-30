@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import authBg from "../assets/bgImg.jpg";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
 const Signin = () => {
   const navigate = useNavigate();
 
@@ -17,12 +20,9 @@ const Signin = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const backgroundImage = authBg;
-
   // =====================================================
-  // PASSWORD CHECK
-  // This mirrors the main rules used by the backend.
-  // Backend validation is still the final authority.
+  // PASSWORD STRENGTH
+  // Backend validation remains the final authority.
   // =====================================================
   const checkPasswordStrength = (password) => {
     if (!password) {
@@ -80,7 +80,11 @@ const Signin = () => {
       "umt123",
     ];
 
-    if (weakPatterns.some((item) => normalized.includes(item))) {
+    if (
+      weakPatterns.some((pattern) =>
+        normalized.includes(pattern)
+      )
+    ) {
       return {
         strong: false,
         message: "Password is weak",
@@ -109,7 +113,7 @@ const Signin = () => {
     formData.password === formData.confirm_password;
 
   // =====================================================
-  // HANDLE INPUT
+  // FORM INPUT
   // =====================================================
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -124,10 +128,30 @@ const Signin = () => {
   };
 
   // =====================================================
+  // READ BACKEND RESPONSE SAFELY
+  // =====================================================
+  const readResponse = async (response) => {
+    const contentType =
+      response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      return await response.json();
+    }
+
+    const text = await response.text();
+
+    return {
+      detail: text || "Unexpected server response.",
+    };
+  };
+
+  // =====================================================
   // SIGNUP
   // =====================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
 
     setError("");
     setMessage("");
@@ -157,9 +181,12 @@ const Signin = () => {
       setLoading(true);
 
       const response = await fetch(
-        "http://localhost:8000/user/signup",
+        `${API_BASE_URL}/user/signup`,
         {
           method: "POST",
+
+          // Required for HttpOnly authentication cookies
+          credentials: "include",
 
           headers: {
             "Content-Type": "application/json",
@@ -167,7 +194,7 @@ const Signin = () => {
 
           body: JSON.stringify({
             full_name: formData.full_name.trim(),
-            email: formData.email.trim(),
+            email: formData.email.trim().toLowerCase(),
             password: formData.password,
             confirm_password:
               formData.confirm_password,
@@ -176,55 +203,44 @@ const Signin = () => {
         }
       );
 
-      const data = await response.json();
+      const data = await readResponse(response);
 
       if (!response.ok) {
         let errorMessage =
           "Unable to create your account.";
 
-        /*
-          FastAPI validation errors often return:
-          {
-            detail: [...]
-          }
-        */
         if (Array.isArray(data.detail)) {
           errorMessage = data.detail
-            .map((item) => item.msg)
+            .map((item) => {
+              if (typeof item === "string") {
+                return item;
+              }
+
+              return item.msg || "Invalid information.";
+            })
             .join(" ");
-        } else if (data.detail) {
+        } else if (
+          typeof data.detail === "string"
+        ) {
           errorMessage = data.detail;
         }
 
         throw new Error(errorMessage);
       }
 
-      // ---------------------------------------------
-      // JWT
-      // ---------------------------------------------
-      if (data.access_token) {
-        /*
-          Better than localStorage for now because the
-          token disappears when the browser session ends.
+      /*
+        IMPORTANT:
+        We DO NOT store JWT here.
 
-          Later we should move authentication to a
-          Secure + HttpOnly cookie from FastAPI.
-        */
-        sessionStorage.setItem(
-          "access_token",
-          data.access_token
-        );
-      }
+        FastAPI sets:
+        Set-Cookie: access_token=...
 
-      if (data.user) {
-        sessionStorage.setItem(
-          "user",
-          JSON.stringify(data.user)
-        );
-      }
+        Because it is HttpOnly, JavaScript cannot read it.
+      */
 
       setMessage(
-        data.message || "Account created successfully."
+        data.message ||
+          "Account created successfully."
       );
 
       setFormData({
@@ -235,11 +251,17 @@ const Signin = () => {
         agreed: false,
       });
 
-      // Small delay so the success message is visible.
       setTimeout(() => {
         navigate("/");
-      }, 1000);
+      }, 700);
     } catch (err) {
+      if (err instanceof TypeError) {
+        setError(
+          "Unable to connect to the server. Please try again."
+        );
+        return;
+      }
+
       setError(
         err.message ||
           "Something went wrong. Please try again."
@@ -259,27 +281,22 @@ const Signin = () => {
         items-center
         justify-center
         overflow-hidden
-
         px-4
         py-6
-
         sm:px-6
         sm:py-8
-
         md:px-8
         md:py-10
-
         lg:px-10
         lg:py-12
-
         xl:px-12
         2xl:px-16
       "
     >
-      {/* ================= BACKGROUND ================= */}
+      {/* BACKGROUND */}
       <div className="absolute inset-0">
         <img
-          src={backgroundImage}
+          src={authBg}
           alt=""
           aria-hidden="true"
           className="
@@ -293,21 +310,17 @@ const Signin = () => {
         <div className="absolute inset-0 bg-[#061727]/20" />
       </div>
 
-      {/* ================= SIGNUP CARD ================= */}
+      {/* SIGNUP CARD */}
       <div
         className="
           relative
           z-10
           w-full
-
           max-w-[700px]
-
           rounded-[14px]
           bg-white
-
           px-5
           py-6
-
           shadow-[0_20px_60px_rgba(0,0,0,0.20)]
 
           sm:rounded-[16px]
@@ -376,6 +389,7 @@ const Signin = () => {
               onChange={handleChange}
               placeholder="Enter your full name"
               autoComplete="name"
+              maxLength={255}
               required
               className="
                 h-[48px]
@@ -389,13 +403,10 @@ const Signin = () => {
                 text-[#1f2937]
                 outline-none
                 transition
-
                 placeholder:text-[#9aa1aa]
-
                 focus:border-[#159bc7]
                 focus:ring-2
                 focus:ring-[#159bc7]/10
-
                 sm:h-[52px]
                 sm:text-[15px]
               "
@@ -415,6 +426,7 @@ const Signin = () => {
               onChange={handleChange}
               placeholder="Enter your email"
               autoComplete="email"
+              maxLength={255}
               required
               className="
                 h-[48px]
@@ -428,13 +440,10 @@ const Signin = () => {
                 text-[#1f2937]
                 outline-none
                 transition
-
                 placeholder:text-[#9aa1aa]
-
                 focus:border-[#159bc7]
                 focus:ring-2
                 focus:ring-[#159bc7]/10
-
                 sm:h-[52px]
                 sm:text-[15px]
               "
@@ -466,9 +475,7 @@ const Signin = () => {
                 text-[#1f2937]
                 outline-none
                 transition
-
                 placeholder:text-[#9aa1aa]
-
                 sm:h-[52px]
                 sm:text-[15px]
 
@@ -482,7 +489,6 @@ const Signin = () => {
               `}
             />
 
-            {/* PASSWORD STATUS */}
             {formData.password && (
               <p
                 className={`
@@ -501,7 +507,6 @@ const Signin = () => {
               </p>
             )}
 
-            {/* SMALL PASSWORD REQUIREMENTS */}
             <div
               className="
                 mt-2
@@ -544,22 +549,19 @@ const Signin = () => {
                 text-[#1f2937]
                 outline-none
                 transition
-
                 placeholder:text-[#9aa1aa]
-
                 sm:h-[52px]
                 sm:text-[15px]
 
                 ${
                   formData.confirm_password
                     ? passwordsMatch
-                      ? "border-green-500"
-                      : "border-red-400"
-                    : "border-[#d7dce3]"
+                      ? "border-green-500 focus:ring-green-500/10"
+                      : "border-red-400 focus:ring-red-400/10"
+                    : "border-[#d7dce3] focus:border-[#159bc7] focus:ring-[#159bc7]/10"
                 }
 
                 focus:ring-2
-                focus:ring-[#159bc7]/10
               `}
             />
 
@@ -619,6 +621,7 @@ const Signin = () => {
           {/* ERROR */}
           {error && (
             <div
+              role="alert"
               className="
                 rounded-[7px]
                 border
@@ -637,6 +640,7 @@ const Signin = () => {
           {/* SUCCESS */}
           {message && (
             <div
+              role="status"
               className="
                 rounded-[7px]
                 border
@@ -663,21 +667,15 @@ const Signin = () => {
               items-center
               justify-center
               rounded-[7px]
-
               bg-[#0ea6d8]
-
               text-[14px]
               font-semibold
               text-white
-
               transition-colors
               duration-200
-
               hover:bg-[#078db9]
-
               disabled:cursor-not-allowed
               disabled:opacity-60
-
               sm:h-[52px]
               sm:text-[15px]
             "
@@ -688,7 +686,6 @@ const Signin = () => {
           </button>
         </form>
 
-        {/* LOGIN */}
         <p className="mt-6 text-center text-[13px] text-[#697181] sm:text-[14px]">
           Already have an account?{" "}
           <Link

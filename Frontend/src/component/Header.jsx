@@ -17,17 +17,21 @@ import { useCart } from "../context/CartContext";
 import product1 from "../assets/product1.webp";
 import product2 from "../assets/product2.webp";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [user, setUser] = useState(null);
 
   const location = useLocation();
   const navigate = useNavigate();
-  const [profileOpen, setProfileOpen] = useState(false);
 
-  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const {
     cartItems,
@@ -70,29 +74,81 @@ const Header = () => {
     setSearchQuery("");
   };
 
+  // ================= AUTH CHECK =================
   useEffect(() => {
-    try {
-      const storedUser = sessionStorage.getItem("user");
-      const token = sessionStorage.getItem("access_token");
+    let cancelled = false;
 
-      if (storedUser && token) {
-        setUser(JSON.parse(storedUser));
-      } else {
-        setUser(null);
+    const checkCurrentUser = async () => {
+      try {
+        setAuthLoading(true);
+
+        const response = await fetch(
+          `${API_BASE_URL}/user/me`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setUser(null);
+            setProfileOpen(false);
+          }
+
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error(
+          "Authentication check failed:",
+          error
+        );
+
+        if (!cancelled) {
+          setUser(null);
+          setProfileOpen(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
       }
-    } catch {
-      setUser(null);
-    }
+    };
+
+    checkCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("access_token");
-    sessionStorage.removeItem("user");
+  // ================= LOGOUT =================
+  const handleLogout = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/user/logout`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
 
-    setUser(null);
-    setProfileOpen(false);
-
-    navigate("/");
+      if (!response.ok) {
+        console.error("Logout request failed.");
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      setUser(null);
+      setProfileOpen(false);
+      navigate("/login");
+    }
   };
 
   return (
@@ -107,7 +163,6 @@ const Header = () => {
             max-w-[1456px]
             items-center
             justify-between
-
             px-4
             sm:px-6
             md:px-8
@@ -118,7 +173,6 @@ const Header = () => {
         >
           {/* Left Side */}
           <div className="flex items-center">
-            {/* Brand */}
             <Link
               to="/"
               className="
@@ -127,7 +181,6 @@ const Header = () => {
                 font-semibold
                 tracking-tight
                 text-black
-
                 sm:text-[15px]
                 md:text-[16px]
                 lg:text-xl
@@ -136,19 +189,15 @@ const Header = () => {
               Prism Wellness
             </Link>
 
-            {/* Navigation */}
             <nav
               className="
                 ml-5
                 hidden
                 items-center
                 gap-5
-
                 md:flex
-
                 lg:ml-7
                 lg:gap-7
-
                 xl:ml-8
                 xl:gap-8
               "
@@ -203,7 +252,6 @@ const Header = () => {
               flex
               items-center
               gap-4
-
               sm:gap-5
               md:gap-6
               lg:gap-7
@@ -235,7 +283,22 @@ const Header = () => {
 
             {/* Profile */}
             <div className="relative hidden sm:block">
-              {user ? (
+              {authLoading ? (
+                <button
+                  type="button"
+                  aria-label="Checking profile"
+                  disabled
+                  className="
+        flex
+        items-center
+        justify-center
+        text-black/50
+        cursor-default
+      "
+                >
+                  <UserRound size={19} strokeWidth={1.8} />
+                </button>
+              ) : user ? (
                 <button
                   type="button"
                   aria-label="Profile"
@@ -259,8 +322,8 @@ const Header = () => {
                 </button>
               ) : (
                 <Link
-                  to="/signup"
-                  aria-label="Profile"
+                  to="/login"
+                  aria-label="Login"
                   className="
         flex
         cursor-pointer
@@ -284,6 +347,7 @@ const Header = () => {
               onClick={() => {
                 setCartOpen(true);
                 setSearchOpen(false);
+                setProfileOpen(false);
               }}
               className="
                 relative
@@ -395,11 +459,9 @@ const Header = () => {
         </div>
       </header>
 
-      {/* ================= USER PROFILE DROPDOWN ================= */}
-
+      {/* ================= PROFILE DROPDOWN ================= */}
       {user && profileOpen && (
         <>
-          {/* Click outside */}
           <div
             className="fixed inset-0 z-[998]"
             onClick={() => setProfileOpen(false)}
@@ -407,105 +469,77 @@ const Header = () => {
 
           <div
             className="
-        fixed
-        right-4
-        top-[100px]
-        z-[999]
+              fixed
+              right-4
+              top-[100px]
+              z-[999]
+              w-[calc(100%-32px)]
+              max-w-[330px]
+              overflow-hidden
+              rounded-[14px]
+              border
+              border-[#e3e6ea]
+              bg-white
+              shadow-[0_18px_50px_rgba(0,0,0,0.18)]
 
-        w-[calc(100%-32px)]
-        max-w-[330px]
-
-        overflow-hidden
-        rounded-[14px]
-
-        border
-        border-[#e3e6ea]
-
-        bg-white
-
-        shadow-[0_18px_50px_rgba(0,0,0,0.18)]
-
-        sm:right-6
-        md:right-8
-        lg:right-10
-        xl:right-12
-      "
+              sm:right-6
+              md:right-8
+              lg:right-10
+              xl:right-12
+            "
           >
-            {/* User Info */}
             <div className="px-5 py-5">
               <div className="flex items-center gap-3">
-                {/* Avatar */}
                 <div
                   className="
-              flex
-              h-[46px]
-              w-[46px]
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              bg-[#e8f6fb]
-              text-[#0ea6d8]
-            "
+                    flex
+                    h-[46px]
+                    w-[46px]
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-[#e8f6fb]
+                    text-[#0ea6d8]
+                  "
                 >
                   <UserRound size={22} strokeWidth={1.8} />
                 </div>
 
                 <div className="min-w-0">
-                  <p
-                    className="
-                truncate
-                text-[15px]
-                font-semibold
-                text-[#17182a]
-              "
-                  >
+                  <p className="truncate text-[15px] font-semibold text-[#17182a]">
                     {user.full_name}
                   </p>
 
-                  <p
-                    className="
-                mt-0.5
-                truncate
-                text-[13px]
-                text-[#737b87]
-              "
-                  >
+                  <p className="mt-0.5 truncate text-[13px] text-[#737b87]">
                     {user.email}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Divider */}
             <div className="h-px bg-[#e5e7eb]" />
 
-            {/* Logout */}
             <div className="p-3">
               <button
                 type="button"
                 onClick={handleLogout}
                 className="
-            flex
-            h-[44px]
-            w-full
-            cursor-pointer
-            items-center
-            justify-center
-
-            rounded-[8px]
-
-            bg-[#061727]
-
-            text-[14px]
-            font-semibold
-            text-white
-
-            transition-colors
-            duration-200
-
-            hover:bg-[#102b42]
-          "
+                  flex
+                  h-[44px]
+                  w-full
+                  cursor-pointer
+                  items-center
+                  justify-center
+                  rounded-[8px]
+                  bg-[#061727]
+                  text-[14px]
+                  font-semibold
+                  text-white
+                  transition-colors
+                  duration-200
+                  hover:bg-[#102b42]
+                "
               >
                 Logout
               </button>
@@ -515,7 +549,6 @@ const Header = () => {
       )}
 
       {/* ================= SEARCH POPUP ================= */}
-
       {searchOpen && (
         <div
           className="
@@ -543,7 +576,6 @@ const Header = () => {
               md:w-[calc(100%-40px)]
             "
           >
-            {/* Search Input */}
             <div
               className="
                 flex
@@ -603,7 +635,6 @@ const Header = () => {
               </button>
             </div>
 
-            {/* Search Results */}
             <div
               className="
                 max-h-[calc(100vh-100px)]
@@ -623,7 +654,6 @@ const Header = () => {
                     grid
                     grid-cols-2
                     gap-4
-
                     sm:flex
                     sm:flex-wrap
                   "
@@ -707,7 +737,6 @@ const Header = () => {
       )}
 
       {/* ================= CART SIDEBAR ================= */}
-
       {cartOpen && (
         <div
           className="
@@ -735,7 +764,6 @@ const Header = () => {
               md:w-[500px]
             "
           >
-            {/* Close */}
             <div
               className="
                 flex
@@ -771,7 +799,6 @@ const Header = () => {
             </div>
 
             {cartItems.length === 0 ? (
-              /* Empty Cart */
               <div
                 className="
                   flex
@@ -797,12 +824,9 @@ const Header = () => {
 
                 <p className="mt-1 text-[15px] text-[#282f40]">
                   Have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCartOpen(false);
-                      setProfileOpen(true);
-                    }}
+                  <Link
+                    to="/login"
+                    onClick={() => setCartOpen(false)}
                     className="
                       cursor-pointer
                       text-[#125ee8]
@@ -811,7 +835,7 @@ const Header = () => {
                     "
                   >
                     Log in
-                  </button>{" "}
+                  </Link>{" "}
                   to check out faster.
                 </p>
 
@@ -841,7 +865,6 @@ const Header = () => {
               </div>
             ) : (
               <>
-                {/* Cart Header */}
                 <div
                   className="
                     flex
@@ -863,7 +886,6 @@ const Header = () => {
                   </span>
                 </div>
 
-                {/* Cart Products */}
                 <div
                   className="
                     flex-1
@@ -884,7 +906,6 @@ const Header = () => {
                         py-5
                       "
                     >
-                      {/* Product Image */}
                       <div
                         className="
                           h-[95px]
@@ -900,15 +921,10 @@ const Header = () => {
                         <img
                           src={item.image}
                           alt={item.title}
-                          className="
-                            h-full
-                            w-full
-                            object-cover
-                          "
+                          className="h-full w-full object-cover"
                         />
                       </div>
 
-                      {/* Product Detail */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -924,13 +940,7 @@ const Header = () => {
                               {item.title}
                             </h3>
 
-                            <p
-                              className="
-                                mt-1
-                                text-[15px]
-                                text-[#243c64]
-                              "
-                            >
+                            <p className="mt-1 text-[15px] text-[#243c64]">
                               ${Number(item.price).toFixed(2)}
                             </p>
                           </div>
@@ -950,7 +960,6 @@ const Header = () => {
                           </button>
                         </div>
 
-                        {/* Quantity */}
                         <div
                           className="
                             mt-4
@@ -1011,14 +1020,7 @@ const Header = () => {
                           </button>
                         </div>
 
-                        <p
-                          className="
-                            mt-3
-                            text-[14px]
-                            font-semibold
-                            text-[#17182a]
-                          "
-                        >
+                        <p className="mt-3 text-[14px] font-semibold text-[#17182a]">
                           $
                           {(
                             Number(item.price) * item.quantity
@@ -1029,7 +1031,6 @@ const Header = () => {
                   ))}
                 </div>
 
-                {/* Cart Footer */}
                 <div
                   className="
                     shrink-0
@@ -1042,23 +1043,11 @@ const Header = () => {
                   "
                 >
                   <div className="flex items-center justify-between">
-                    <span
-                      className="
-                        text-[16px]
-                        font-medium
-                        text-[#252b39]
-                      "
-                    >
+                    <span className="text-[16px] font-medium text-[#252b39]">
                       Subtotal
                     </span>
 
-                    <span
-                      className="
-                        text-[18px]
-                        font-bold
-                        text-[#17182a]
-                      "
-                    >
+                    <span className="text-[18px] font-bold text-[#17182a]">
                       ${cartTotal.toFixed(2)}
                     </span>
                   </div>
