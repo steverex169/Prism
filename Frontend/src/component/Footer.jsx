@@ -342,6 +342,13 @@ const Footer = () => {
 
         {/* Bottom Line */}
         <div className="mt-14 h-px w-full bg-[#304052] sm:mt-16 lg:mt-20" />
+
+        {/* Required Research Use Disclaimer */}
+        <div className="pt-6 text-center">
+          <p className="text-[12px] leading-[1.7] text-[#b3bac2] sm:text-[13px]">
+            For research and laboratory use only. Not for human or animal consumption.
+          </p>
+        </div>
       </div>
     </footer>
   );

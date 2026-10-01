@@ -3,7 +3,8 @@ from sqlalchemy import (
     Integer,
     String,
     Boolean,
-    DateTime
+    DateTime,
+    text,
 )
 
 from sqlalchemy.sql import func
@@ -40,6 +41,46 @@ class User(base):
         Boolean,
         default=True,
         nullable=False
+    )
+
+    # Compliance fields.
+    # Server defaults keep existing rows valid when these columns are added.
+    age_verified = Column(
+        Boolean,
+        default=False,
+        server_default=text("0"),
+        nullable=False
+    )
+
+    qualified_researcher = Column(
+        Boolean,
+        default=False,
+        server_default=text("0"),
+        nullable=False
+    )
+
+    research_field = Column(
+        String(255),
+        nullable=True
+    )
+
+    research_use_acknowledged = Column(
+        Boolean,
+        default=False,
+        server_default=text("0"),
+        nullable=False
+    )
+
+    terms_accepted = Column(
+        Boolean,
+        default=False,
+        server_default=text("0"),
+        nullable=False
+    )
+
+    terms_accepted_at = Column(
+        DateTime,
+        nullable=True
     )
 
     created_at = Column(

@@ -13,6 +13,10 @@ const Signin = () => {
     email: "",
     password: "",
     confirm_password: "",
+    age_verified: false,
+    qualified_researcher: false,
+    research_field: "",
+    research_use_acknowledged: false,
     agreed: false,
   });
 
@@ -170,6 +174,34 @@ const Signin = () => {
       return;
     }
 
+    if (!formData.age_verified) {
+      setError(
+        "You must confirm that you are 21 years of age or older."
+      );
+      return;
+    }
+
+    if (!formData.qualified_researcher) {
+      setError(
+        "You must confirm that you are a qualified research professional."
+      );
+      return;
+    }
+
+    if (!formData.research_field) {
+      setError(
+        "Please select your field of qualified research."
+      );
+      return;
+    }
+
+    if (!formData.research_use_acknowledged) {
+      setError(
+        "You must acknowledge that all products are for research use only."
+      );
+      return;
+    }
+
     if (!formData.agreed) {
       setError(
         "You must agree to the Terms & Conditions."
@@ -198,6 +230,12 @@ const Signin = () => {
             password: formData.password,
             confirm_password:
               formData.confirm_password,
+            age_verified: formData.age_verified,
+            qualified_researcher:
+              formData.qualified_researcher,
+            research_field: formData.research_field,
+            research_use_acknowledged:
+              formData.research_use_acknowledged,
             agreed: formData.agreed,
           }),
         }
@@ -248,6 +286,10 @@ const Signin = () => {
         email: "",
         password: "",
         confirm_password: "",
+        age_verified: false,
+        qualified_researcher: false,
+        research_field: "",
+        research_use_acknowledged: false,
         agreed: false,
       });
 
@@ -584,6 +626,136 @@ const Signin = () => {
                   : "Passwords do not match"}
               </p>
             )}
+          </div>
+
+          {/* RESEARCH FIELD */}
+          <div>
+            <label className="mb-2 block text-[14px] font-medium text-[#252b39]">
+              Field of Qualified Research
+            </label>
+
+            <select
+              name="research_field"
+              value={formData.research_field}
+              onChange={handleChange}
+              required
+              className="
+                h-[48px]
+                w-full
+                rounded-[7px]
+                border
+                border-[#d7dce3]
+                bg-white
+                px-4
+                text-[14px]
+                text-[#1f2937]
+                outline-none
+                transition
+                focus:border-[#159bc7]
+                focus:ring-2
+                focus:ring-[#159bc7]/10
+                sm:h-[52px]
+                sm:text-[15px]
+              "
+            >
+              <option value="">
+                Select your research field
+              </option>
+              <option value="Pharmacology / Drug Discovery">
+                Pharmacology / Drug Discovery
+              </option>
+              <option value="Biochemistry & Molecular Biology">
+                Biochemistry & Molecular Biology
+              </option>
+              <option value="Academic Research">
+                Academic Research
+              </option>
+              <option value="Contract Research Organization (CRO)">
+                Contract Research Organization (CRO)
+              </option>
+              <option value="Analytical Chemistry Laboratory">
+                Analytical Chemistry Laboratory
+              </option>
+              <option value="Other Qualified Research">
+                Other Qualified Research
+              </option>
+            </select>
+          </div>
+
+          {/* COMPLIANCE CONFIRMATIONS */}
+          <div
+            className="
+              space-y-3
+              rounded-[8px]
+              border
+              border-[#e1e5ea]
+              bg-[#f8fafb]
+              p-4
+            "
+          >
+            <p className="text-[13px] font-semibold text-[#252b39]">
+              Research qualification
+            </p>
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                name="age_verified"
+                checked={formData.age_verified}
+                onChange={handleChange}
+                className="
+                  mt-[3px]
+                  h-[16px]
+                  w-[16px]
+                  shrink-0
+                  cursor-pointer
+                  accent-[#159bc7]
+                "
+              />
+              <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
+                I confirm that I am 21 years of age or older.
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                name="qualified_researcher"
+                checked={formData.qualified_researcher}
+                onChange={handleChange}
+                className="
+                  mt-[3px]
+                  h-[16px]
+                  w-[16px]
+                  shrink-0
+                  cursor-pointer
+                  accent-[#159bc7]
+                "
+              />
+              <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
+                I confirm that I am a qualified research professional.
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                name="research_use_acknowledged"
+                checked={formData.research_use_acknowledged}
+                onChange={handleChange}
+                className="
+                  mt-[3px]
+                  h-[16px]
+                  w-[16px]
+                  shrink-0
+                  cursor-pointer
+                  accent-[#159bc7]
+                "
+              />
+              <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
+                I acknowledge that all products are sold for research use only.
+              </span>
+            </label>
           </div>
 
           {/* TERMS */}

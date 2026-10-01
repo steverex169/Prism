@@ -612,7 +612,7 @@ const Main_page = () => {
         </div>
       </section>
       {/* FAQ Section */}
-      <section className="w-full bg-[#fffbea]" id="faq">
+      <section className="w-full bg-[#FFFBEA]" id="faq">
         <div
           className="
       mx-auto

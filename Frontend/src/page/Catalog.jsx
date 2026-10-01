@@ -1,6 +1,7 @@
 // Catalog.jsx
 
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
   ChevronDown,
@@ -15,8 +16,24 @@ import product2 from "../assets/product2.webp";
 
 import { useCart } from "../context/CartContext";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
 const Catalog = () => {
   const { addToCart } = useCart();
+
+  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [complianceSaving, setComplianceSaving] = useState(false);
+  const [complianceError, setComplianceError] = useState("");
+
+  const [complianceForm, setComplianceForm] = useState({
+    age_verified: false,
+    qualified_researcher: false,
+    research_field: "",
+    research_use_acknowledged: false,
+    agreed: false,
+  });
 
   const products = [
     {
@@ -110,6 +127,165 @@ const Catalog = () => {
         outOfStock: false,
       };
     });
+
+
+  /* =========================
+     AUTH + COMPLIANCE CHECK
+  ========================== */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkCurrentUser = async () => {
+      try {
+        setAuthLoading(true);
+
+        const response = await fetch(
+          `${API_BASE_URL}/user/me`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setUser(null);
+          }
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setUser(data.user);
+
+          setComplianceForm({
+            age_verified: Boolean(
+              data.user.age_verified
+            ),
+            qualified_researcher: Boolean(
+              data.user.qualified_researcher
+            ),
+            research_field:
+              data.user.research_field || "",
+            research_use_acknowledged: Boolean(
+              data.user.research_use_acknowledged
+            ),
+            agreed: Boolean(
+              data.user.terms_accepted
+            ),
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Unable to verify catalog access:",
+          error
+        );
+
+        if (!cancelled) {
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      }
+    };
+
+    checkCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleComplianceChange = (e) => {
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = e.target;
+
+    setComplianceForm((prev) => ({
+      ...prev,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
+    }));
+
+    setComplianceError("");
+  };
+
+  const handleComplianceSubmit = async (e) => {
+    e.preventDefault();
+
+    if (
+      !complianceForm.age_verified ||
+      !complianceForm.qualified_researcher ||
+      !complianceForm.research_use_acknowledged ||
+      !complianceForm.agreed ||
+      !complianceForm.research_field
+    ) {
+      setComplianceError(
+        "Please complete all required confirmations."
+      );
+      return;
+    }
+
+    try {
+      setComplianceSaving(true);
+      setComplianceError("");
+
+      const response = await fetch(
+        `${API_BASE_URL}/user/compliance`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            complianceForm
+          ),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        let message =
+          "Unable to save your research qualification.";
+
+        if (Array.isArray(data.detail)) {
+          message = data.detail
+            .map((item) =>
+              typeof item === "string"
+                ? item
+                : item.msg || "Invalid information."
+            )
+            .join(" ");
+        } else if (
+          typeof data.detail === "string"
+        ) {
+          message = data.detail;
+        }
+
+        throw new Error(message);
+      }
+
+      setUser(data.user);
+    } catch (error) {
+      setComplianceError(
+        error.message ||
+          "Unable to save your research qualification."
+      );
+    } finally {
+      setComplianceSaving(false);
+    }
+  };
 
   /* =========================
      SAVE FILTERS
@@ -300,6 +476,185 @@ const Catalog = () => {
       ? current[1]
       : "Sort";
   };
+
+  if (authLoading) {
+    return (
+      <section className="flex min-h-[420px] items-center justify-center bg-white px-5">
+        <p className="text-[14px] text-[#697181]">
+          Checking account access...
+        </p>
+      </section>
+    );
+  }
+
+  if (!user) {
+    return (
+      <section className="flex min-h-[420px] items-center justify-center bg-white px-5">
+        <div className="w-full max-w-[520px] text-center">
+          <h1 className="text-[30px] font-bold tracking-[-0.03em] text-[#171728]">
+            Account required
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-[450px] text-[14px] leading-[1.7] text-[#697181]">
+            Please log in or create an account before accessing the research catalog.
+          </p>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link
+              to="/login"
+              className="flex h-[46px] items-center justify-center rounded-[7px] bg-[#0ea6d8] px-6 text-[14px] font-semibold text-white hover:bg-[#078db9]"
+            >
+              Log in
+            </Link>
+
+            <Link
+              to="/signup"
+              className="flex h-[46px] items-center justify-center rounded-[7px] border border-[#d7dce3] bg-white px-6 text-[14px] font-semibold text-[#252b39] hover:bg-[#f7f8fa]"
+            >
+              Create account
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!user.compliance_complete) {
+    return (
+      <section className="w-full bg-white px-5 py-12 sm:px-6 md:py-16">
+        <div className="mx-auto w-full max-w-[640px]">
+          <div className="rounded-[14px] border border-[#e1e5ea] bg-white p-6 shadow-[0_18px_50px_rgba(0,0,0,0.08)] sm:p-8">
+            <h1 className="text-[26px] font-bold tracking-[-0.03em] text-[#171728] sm:text-[30px]">
+              Research qualification
+            </h1>
+
+            <p className="mt-3 text-[14px] leading-[1.7] text-[#697181]">
+              All products are sold for Research Use Only. To continue you confirm that you are a qualified research professional aged 21 or older.
+            </p>
+
+            <form
+              onSubmit={handleComplianceSubmit}
+              className="mt-6 space-y-4"
+            >
+              <div>
+                <label className="mb-2 block text-[14px] font-medium text-[#252b39]">
+                  Field of Qualified Research
+                </label>
+
+                <select
+                  name="research_field"
+                  value={complianceForm.research_field}
+                  onChange={handleComplianceChange}
+                  required
+                  className="h-[50px] w-full rounded-[7px] border border-[#d7dce3] bg-white px-4 text-[14px] text-[#1f2937] outline-none focus:border-[#159bc7] focus:ring-2 focus:ring-[#159bc7]/10"
+                >
+                  <option value="">
+                    Select your research field
+                  </option>
+                  <option value="Pharmacology / Drug Discovery">
+                    Pharmacology / Drug Discovery
+                  </option>
+                  <option value="Biochemistry & Molecular Biology">
+                    Biochemistry & Molecular Biology
+                  </option>
+                  <option value="Academic Research">
+                    Academic Research
+                  </option>
+                  <option value="Contract Research Organization (CRO)">
+                    Contract Research Organization (CRO)
+                  </option>
+                  <option value="Analytical Chemistry Laboratory">
+                    Analytical Chemistry Laboratory
+                  </option>
+                  <option value="Other Qualified Research">
+                    Other Qualified Research
+                  </option>
+                </select>
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="age_verified"
+                  checked={complianceForm.age_verified}
+                  onChange={handleComplianceChange}
+                  className="mt-[3px] h-[16px] w-[16px] shrink-0 cursor-pointer accent-[#159bc7]"
+                />
+                <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
+                  I confirm that I am 21 years of age or older.
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="qualified_researcher"
+                  checked={complianceForm.qualified_researcher}
+                  onChange={handleComplianceChange}
+                  className="mt-[3px] h-[16px] w-[16px] shrink-0 cursor-pointer accent-[#159bc7]"
+                />
+                <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
+                  I confirm that I am a qualified research professional.
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="research_use_acknowledged"
+                  checked={complianceForm.research_use_acknowledged}
+                  onChange={handleComplianceChange}
+                  className="mt-[3px] h-[16px] w-[16px] shrink-0 cursor-pointer accent-[#159bc7]"
+                />
+                <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
+                  I acknowledge that all products are sold for research use only.
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="agreed"
+                  checked={complianceForm.agreed}
+                  onChange={handleComplianceChange}
+                  className="mt-[3px] h-[16px] w-[16px] shrink-0 cursor-pointer accent-[#159bc7]"
+                />
+                <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
+                  I agree to the{" "}
+                  <Link
+                    to="/terms"
+                    className="font-medium text-[#159bc7] hover:underline"
+                  >
+                    Terms & Conditions
+                  </Link>
+                  .
+                </span>
+              </label>
+
+              {complianceError && (
+                <div
+                  role="alert"
+                  className="rounded-[7px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600"
+                >
+                  {complianceError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={complianceSaving}
+                className="flex h-[50px] w-full items-center justify-center rounded-[7px] bg-[#0ea6d8] text-[14px] font-semibold text-white transition-colors hover:bg-[#078db9] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {complianceSaving
+                  ? "Saving..."
+                  : "Continue to Catalog"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="w-full bg-white font-sans">
