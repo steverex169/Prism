@@ -27,86 +27,122 @@ import Compliance from "./page/Compliance.jsx";
 import Signin from "./page/Signin.jsx";
 import Login from "./page/Login.jsx";
 import NotFound from "./page/NotFound.jsx";
+import Checkout from "./page/Checkout.jsx";
+
+// Admin
+import AdminLogin from "./page/Admin_Login.jsx";
 
 const App = () => {
   return (
     <>
       <ScrollToTop />
 
-      <Top_Header />
-      <Header />
-
       <Routes>
-        {/* Guest-only routes */}
+        {/* =========================
+            ADMIN ROUTES
+            No Header / Footer
+        ========================= */}
         <Route
-          path="/signup"
+          path="/admin/login"
+          element={<AdminLogin />}
+        />
+
+        {/* =========================
+            WEBSITE ROUTES
+        ========================= */}
+        <Route
+          path="*"
           element={
-            <GuestRoute>
-              <Signin />
-            </GuestRoute>
+            <>
+              <Top_Header />
+              <Header />
+
+              <Routes>
+                {/* Guest-only routes */}
+                <Route
+                  path="/signup"
+                  element={
+                    <GuestRoute>
+                      <Signin />
+                    </GuestRoute>
+                  }
+                />
+
+                <Route
+                  path="/login"
+                  element={
+                    <GuestRoute>
+                      <Login />
+                    </GuestRoute>
+                  }
+                />
+
+                {/* Main Routes */}
+                <Route path="/" element={<Main_page />} />
+                <Route path="/catalog" element={<Catalog />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/about" element={<About />} />
+                <Route path='/checkout' element={<Checkout/>} />
+
+                {/* Policies */}
+                <Route
+                  path="/terms"
+                  element={<TermCondition />}
+                />
+
+                <Route
+                  path="/privacy"
+                  element={<Privay />}
+                />
+
+                <Route
+                  path="/refund"
+                  element={<Refund />}
+                />
+
+                <Route
+                  path="/shipping"
+                  element={<Shipping />}
+                />
+
+                {/* Other Pages */}
+                <Route
+                  path="/quality"
+                  element={<Quality />}
+                />
+
+                <Route
+                  path="/third"
+                  element={<Third />}
+                />
+
+                <Route
+                  path="/certificate"
+                  element={<Certificate />}
+                />
+
+                <Route
+                  path="/manufacturing"
+                  element={<Manufacturing />}
+                />
+
+                <Route
+                  path="/compliance"
+                  element={<Compliance />}
+                />
+
+                {/* Unknown Route */}
+                <Route
+                  path="*"
+                  element={<NotFound />}
+                />
+              </Routes>
+
+              <Footer />
+            </>
           }
         />
-
-        <Route
-          path="/login"
-          element={
-            <GuestRoute>
-              <Login />
-            </GuestRoute>
-          }
-        />
-
-        {/* Main Routes */}
-        <Route path="/" element={<Main_page />} />
-        <Route path="/catalog" element={<Catalog />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/about" element={<About />} />
-
-        {/* Policies */}
-        <Route
-          path="/terms"
-          element={<TermCondition />}
-        />
-
-        <Route
-          path="/privacy"
-          element={<Privay />}
-        />
-
-        <Route
-          path="/refund"
-          element={<Refund />}
-        />
-
-        <Route
-          path="/shipping"
-          element={<Shipping />}
-        />
-
-        {/* Other Pages */}
-        <Route path="/quality" element={<Quality />} />
-        <Route path="/third" element={<Third />} />
-
-        <Route
-          path="/certificate"
-          element={<Certificate />}
-        />
-
-        <Route
-          path="/manufacturing"
-          element={<Manufacturing />}
-        />
-
-        <Route
-          path="/compliance"
-          element={<Compliance />}
-        />
-
-        {/* Unknown Route */}
-        <Route path="*" element={<NotFound />} />
       </Routes>
-
-      <Footer />
     </>
   );
 };

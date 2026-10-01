@@ -1075,7 +1075,7 @@ const Header = () => {
                       hover:bg-[#172f55]
                     "
                   >
-                    Checkout
+                    <Link to="/checkout">Checkout</Link>
                   </button>
 
                   <Link
