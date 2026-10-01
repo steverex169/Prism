@@ -31,6 +31,7 @@ import Checkout from "./page/Checkout.jsx";
 
 // Admin
 import AdminLogin from "./page/Admin_Login.jsx";
+import Admin from "./page/Admin.jsx";
 
 const App = () => {
   return (
@@ -43,8 +44,15 @@ const App = () => {
             No Header / Footer
         ========================= */}
         <Route
-          path="/admin/login"
+          path="/pannel/login"
           element={<AdminLogin />}
+        />
+
+        <Route
+          path="/admin/*"
+          element={
+            <Admin/>
+          }
         />
 
         {/* =========================

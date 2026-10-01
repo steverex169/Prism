@@ -5,10 +5,17 @@ from Endpoint.Hero_endpoint import router as hero_endpoint
 from Endpoint.Email_endpoint import router as email_endpoint
 from fastapi.middleware.cors import CORSMiddleware
 from Endpoint.User_endpoint import router as user_endpoint
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
 app = FastAPI()
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Mount uploaded files
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

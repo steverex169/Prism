@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from Model import Hero_model
 from Database import get_db
 import os
-
+import uuid
 
 router = APIRouter(
     prefix="/hero",
@@ -34,7 +34,6 @@ class DeleteHeroImage(BaseModel):
 
 
 UPLOAD_FOLDER = "uploads/hero"
-MAX_FILE_SIZE = 100 * 1024  # 100 KB
 
 ALLOWED_EXTENSIONS = {
     ".png",
@@ -49,6 +48,29 @@ ALLOWED_CONTENT_TYPES = {
     "image/webp"
 }
 
+HERO_SECTIONS = [
+    {
+        "key": "home",
+        "name": "Home",
+        "path": "/",
+    },
+    {
+        "key": "about",
+        "name": "About",
+        "path": "/about",
+    },
+    {
+        "key": "contact",
+        "name": "Contact",
+        "path": "/contact",
+    },
+    {
+        "key": "catalog",
+        "name": "Catalog",
+        "path": "/catalog",
+    },
+]
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -57,7 +79,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # -------------------------
 
 async def save_image(image: UploadFile):
-
     extension = os.path.splitext(image.filename)[1].lower()
 
     if extension not in ALLOWED_EXTENSIONS:
@@ -74,12 +95,6 @@ async def save_image(image: UploadFile):
 
     content = await image.read()
 
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=400,
-            detail="Image size must not exceed 100 KB"
-        )
-
     filename = f"{uuid.uuid4()}{extension}"
 
     file_path = os.path.join(
@@ -90,8 +105,15 @@ async def save_image(image: UploadFile):
     with open(file_path, "wb") as f:
         f.write(content)
 
-    return file_path
+    # Always store URL-friendly path in database
+    return file_path.replace("\\", "/")
 
+@router.get("/sections")
+def get_hero_sections():
+    return {
+        "message": "Hero sections fetched successfully",
+        "data": HERO_SECTIONS
+    }
 
 # -------------------------
 # CREATE HERO IMAGE
@@ -104,11 +126,44 @@ async def create_hero_image(
     alt_text: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-
     try:
+        if not section_name:
+            raise HTTPException(
+                status_code=400,
+                detail="Section name is required"
+            )
 
+        # Check if this section already has a hero image
+        existing_hero = db.query(
+            Hero_model.HeroImages
+        ).filter(
+            Hero_model.HeroImages.section_name == section_name
+        ).first()
+
+        # Save new image
         image_path = await save_image(image)
 
+        if existing_hero:
+            # Delete old physical image
+            if (
+                existing_hero.image_url
+                and os.path.exists(existing_hero.image_url)
+            ):
+                os.remove(existing_hero.image_url)
+
+            # Update existing record
+            existing_hero.image_url = image_path
+            existing_hero.alt_text = alt_text
+
+            db.commit()
+            db.refresh(existing_hero)
+
+            return {
+                "message": "Hero image updated successfully",
+                "data": existing_hero
+            }
+
+        # Otherwise create a new record
         new_hero = Hero_model.HeroImages(
             section_name=section_name,
             image_url=image_path,
@@ -128,14 +183,12 @@ async def create_hero_image(
         raise
 
     except SQLAlchemyError as e:
-
         db.rollback()
 
         raise HTTPException(
             status_code=500,
             detail=str(e)
         )
-
 
 # -------------------------
 # GET ALL HERO IMAGES

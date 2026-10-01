@@ -1,9 +1,10 @@
-import React, { useState } from "react";
-import heroImage from "../assets/bgImg.jpg";
+import React, { useEffect, useState } from "react";
 import prismQuality from "../assets/prisim-quality.webp";
 import { Plus, X } from "lucide-react";
 
 const Main_page = () => {
+  const [activeFaq, setActiveFaq] = useState(0);
+  const [heroImage, setHeroImage] = useState(null);
   const heroData = {
     backgroundImage: heroImage,
 
@@ -53,7 +54,51 @@ const Main_page = () => {
     },
   ];
 
-  const [activeFaq, setActiveFaq] = useState(0);
+  useEffect(() => {
+    const fetchHomeHero = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/hero/?t=${Date.now()}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch hero images");
+        }
+
+        const result = await response.json();
+
+        console.log("Hero API response:", result);
+
+        const homeHero = result.data?.find(
+          (hero) =>
+            hero.section_name?.trim().toLowerCase() === "home"
+        );
+
+        console.log("Home hero:", homeHero);
+
+        if (homeHero?.image_url) {
+          const imageUrl = `http://localhost:8000/${homeHero.image_url}`;
+
+          console.log("Hero image URL:", imageUrl);
+
+          setHeroImage(`${imageUrl}?t=${Date.now()}`);
+        } else {
+          console.log("No Home hero image found");
+          setHeroImage(null);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load Home hero image:",
+          error
+        );
+      }
+    };
+
+    fetchHomeHero();
+  }, []);
 
   return (
     <>
@@ -89,7 +134,9 @@ const Main_page = () => {
           2xl:bg-[length:1920px_750px]
         "
         style={{
-          backgroundImage: `url(${heroData.backgroundImage})`,
+          backgroundImage: heroData.backgroundImage
+            ? `url(${heroData.backgroundImage})`
+            : "none",
         }}
       >
         {/* Background Image Overlay */}

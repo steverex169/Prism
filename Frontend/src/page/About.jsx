@@ -9,11 +9,13 @@ import {
 } from "lucide-react";
 
 import missionImage from "../assets/missionImage.webp";
-import aboutHeroImage from "../assets/becon.jpg";
 
 const About = () => {
+  const [heroImage, setHeroImage] = useState(null);
+  const missionRef = useRef(null);
+  const [missionVisible, setMissionVisible] = useState(false);
   const aboutData = {
-    backgroundImage: aboutHeroImage,
+    backgroundImage: heroImage,
 
     badgeText: "OUR STORY",
 
@@ -44,9 +46,6 @@ const About = () => {
     ],
   };
 
-  const missionRef = useRef(null);
-  const [missionVisible, setMissionVisible] = useState(false);
-
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -64,6 +63,45 @@ const About = () => {
     }
 
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const fetchAboutHero = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/hero/?t=${Date.now()}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch hero images");
+        }
+
+        const result = await response.json();
+
+        const aboutHero = result.data?.find(
+          (hero) =>
+            hero.section_name?.trim().toLowerCase() === "about"
+        );
+
+        if (aboutHero?.image_url) {
+          const imageUrl = `http://localhost:8000/${aboutHero.image_url}`;
+
+          setHeroImage(`${imageUrl}?t=${Date.now()}`);
+        } else {
+          setHeroImage(null);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load About hero image:",
+          error
+        );
+      }
+    };
+
+    fetchAboutHero();
   }, []);
 
   return (

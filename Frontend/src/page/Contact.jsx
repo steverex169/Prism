@@ -1,6 +1,6 @@
 // Contact.jsx
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Mail,
   FlaskConical,
@@ -9,13 +9,10 @@ import {
   Sparkles,
 } from "lucide-react";
 
-// For now you can use an image from your assets folder.
-// Later this can come from your admin panel / API.
-import contactBg from "../assets/becon.jpg";
-
 const Contact = () => {
+  const [heroImage, setHeroImage] = useState(null);
   const contactData = {
-    backgroundImage: contactBg,
+    backgroundImage: heroImage,
 
     badgeText: "GET IN TOUCH",
 
@@ -25,6 +22,45 @@ const Contact = () => {
     description:
       "Have questions about our peptide products or your order? Our team is ready to help you with any inquiry.",
   };
+
+  useEffect(() => {
+    const fetchContactHero = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/hero/?t=${Date.now()}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch hero images");
+        }
+
+        const result = await response.json();
+
+        const contactHero = result.data?.find(
+          (hero) =>
+            hero.section_name?.trim().toLowerCase() === "contact"
+        );
+
+        if (contactHero?.image_url) {
+          const imageUrl = `http://localhost:8000/${contactHero.image_url}`;
+
+          setHeroImage(`${imageUrl}?t=${Date.now()}`);
+        } else {
+          setHeroImage(null);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load Contact hero image:",
+          error
+        );
+      }
+    };
+
+    fetchContactHero();
+  }, []);
 
   return (
     <>
