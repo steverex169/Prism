@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Navigate } from "react-router-dom";
 import { Download, LogOut } from "lucide-react";
 
 const Topbar = () => {
@@ -23,7 +23,7 @@ const Topbar = () => {
       ([path]) =>
         path !== "/admin" && location.pathname.startsWith(path + "/")
     )?.[1] ||
-    "Dashboard";
+    "orders";
 
   const handleExport = () => {
     console.log(`Export CSV for: ${activeTab}`);

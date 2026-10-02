@@ -3,10 +3,12 @@ import React, { useEffect, useState } from "react";
 const HeroPage = () => {
     const [heroes, setHeroes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [editingHero, setEditingHero] = useState(null);
 
     const [showModal, setShowModal] = useState(false);
     const [saving, setSaving] = useState(false);
     const [sections, setSections] = useState([]);
+    const [imageError, setImageError] = useState("");
 
     const [formData, setFormData] = useState({
         section_name: "",
@@ -68,6 +70,8 @@ const HeroPage = () => {
     // --------------------------------
 
     const openModal = () => {
+        setEditingHero(null);
+
         setFormData({
             section_name: "",
             alt_text: "",
@@ -76,6 +80,28 @@ const HeroPage = () => {
 
         setPreview(null);
         setShowModal(true);
+        setImageError("");
+    };
+
+    // Edit modal for existing hero image
+
+    const openEditModal = (hero) => {
+        setEditingHero(hero);
+
+        setFormData({
+            section_name: hero.section_name || "",
+            alt_text: hero.alt_text || "",
+            image: null,
+        });
+
+        setPreview(
+            hero.image_url
+                ? `http://localhost:8000/${hero.image_url}`
+                : null
+        );
+
+        setShowModal(true);
+        setImageError("");
     };
 
     // --------------------------------
@@ -86,6 +112,7 @@ const HeroPage = () => {
         if (saving) return;
 
         setShowModal(false);
+        setEditingHero(null);
 
         setFormData({
             section_name: "",
@@ -94,6 +121,7 @@ const HeroPage = () => {
         });
 
         setPreview(null);
+        setImageError("");
     };
 
     // --------------------------------
@@ -118,18 +146,59 @@ const HeroPage = () => {
 
         if (!file) return;
 
+        // Reset previous validation message
+        setImageError("");
+
+        // Check file type
         if (!file.type.startsWith("image/")) {
-            alert("Please select a valid image file.");
+            setImageError("Please select a valid image file.");
+            e.target.value = "";
             return;
         }
 
-        setFormData((prev) => ({
-            ...prev,
-            image: file,
-        }));
+        // Check file size
+        const maxSize = 100 * 1024; // 100 KB
 
+        if (file.size > maxSize) {
+            setImageError("Image must be 100 KB or smaller.");
+            e.target.value = "";
+            return;
+        }
+
+        // Check dimensions
+        const image = new Image();
         const imageUrl = URL.createObjectURL(file);
-        setPreview(imageUrl);
+
+        image.onload = () => {
+            const { width, height } = image;
+
+            // Exact 16:9 check
+            if (width * 9 !== height * 16) {
+                setImageError(
+                    `Image must have a 16:9 ratio. Selected image is ${width}×${height}.`
+                );
+
+                URL.revokeObjectURL(imageUrl);
+                e.target.value = "";
+                return;
+            }
+
+            // Valid image
+            setFormData((prev) => ({
+                ...prev,
+                image: file,
+            }));
+
+            setPreview(imageUrl);
+        };
+
+        image.onerror = () => {
+            setImageError("Unable to read this image.");
+            URL.revokeObjectURL(imageUrl);
+            e.target.value = "";
+        };
+
+        image.src = imageUrl;
     };
 
     // --------------------------------
@@ -139,13 +208,13 @@ const HeroPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.image) {
-            alert("Please select an image.");
+        if (!formData.section_name) {
+            alert("Please select a section.");
             return;
         }
 
-        if (!formData.section_name) {
-            alert("Please select a section.");
+        if (!editingHero && !formData.image) {
+            alert("Please select an image.");
             return;
         }
 
@@ -154,31 +223,77 @@ const HeroPage = () => {
 
             const data = new FormData();
 
-            data.append("image", formData.image);
             data.append("section_name", formData.section_name);
             data.append("alt_text", formData.alt_text);
 
-            const response = await fetch("http://localhost:8000/hero/", {
-                method: "POST",
+            // Only send image if user selected a new one
+            if (formData.image) {
+                data.append("image", formData.image);
+            }
+
+            const url = editingHero
+                ? `http://localhost:8000/hero/${editingHero.id}`
+                : "http://localhost:8000/hero/";
+
+            const response = await fetch(url, {
+                method: editingHero ? "PUT" : "POST",
                 body: data,
             });
 
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.detail || "Failed to create hero image");
+                throw new Error(
+                    result.detail ||
+                    `Failed to ${editingHero ? "update" : "create"} hero image`
+                );
             }
 
-            // Close modal
             closeModal();
 
-            // Refresh table
             await fetchHeroImages();
         } catch (error) {
-            console.error("Error creating hero image:", error);
+            console.error(
+                `Error ${editingHero ? "updating" : "creating"} hero image:`,
+                error
+            );
+
             alert(error.message);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async (hero) => {
+        const confirmed = window.confirm(
+            `Are you sure you want to delete the hero image for "${hero.section_name}"?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(
+                `http://localhost:8000/hero/${hero.id}`,
+                {
+                    method: "DELETE",
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.detail || "Failed to delete hero image"
+                );
+            }
+
+            // Remove immediately from frontend
+            setHeroes((prev) =>
+                prev.filter((item) => item.id !== hero.id)
+            );
+        } catch (error) {
+            console.error("Error deleting hero image:", error);
+            alert(error.message);
         }
     };
 
@@ -219,6 +334,9 @@ const HeroPage = () => {
                             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Alt Text
                             </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Actions
+                            </th>
                         </tr>
                     </thead>
 
@@ -226,7 +344,7 @@ const HeroPage = () => {
                         {loading ? (
                             <tr>
                                 <td
-                                    colSpan="4"
+                                    colSpan="5"
                                     className="px-6 py-16 text-center text-sm text-slate-500"
                                 >
                                     Loading...
@@ -235,7 +353,7 @@ const HeroPage = () => {
                         ) : heroes.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan="4"
+                                    colSpan="5"
                                     className="px-6 py-16 text-center"
                                 >
                                     <div className="flex flex-col items-center justify-center">
@@ -280,6 +398,26 @@ const HeroPage = () => {
                                     <td className="px-6 py-4 text-sm text-slate-700">
                                         {hero.alt_text || "-"}
                                     </td>
+
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => openEditModal(hero)}
+                                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
+                                            >
+                                                Edit
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDelete(hero)}
+                                                className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))
                         )}
@@ -297,11 +435,12 @@ const HeroPage = () => {
                         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
                             <div>
                                 <h2 className="text-lg font-semibold text-[#17212f]">
-                                    Add Hero Image
+                                    {editingHero ? "Edit Hero Image" : "Add Hero Image"}
                                 </h2>
-
                                 <p className="mt-1 text-xs text-slate-400">
-                                    Add an image to a website section
+                                    {editingHero
+                                        ? "Update the hero image details"
+                                        : "Add an image to a website section"}
                                 </p>
                             </div>
 
@@ -358,12 +497,18 @@ const HeroPage = () => {
                                         accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                                         onChange={handleImageChange}
                                         className="block w-full cursor-pointer rounded-lg border border-slate-300 text-sm text-slate-500 file:mr-4 file:border-0 file:bg-slate-100 file:px-4 file:py-3 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-                                        required
+                                        required={!editingHero}
                                     />
 
                                     <p className="mt-2 text-xs text-slate-400">
-                                        PNG, JPG, JPEG or WEBP
+                                        PNG, JPG, JPEG or WEBP • 16:9 ratio • Maximum 100 KB
                                     </p>
+
+                                    {imageError && (
+                                        <p className="mt-2 text-xs font-medium text-red-500">
+                                            {imageError}
+                                        </p>
+                                    )}
 
                                     {/* Preview */}
                                     {preview && (
@@ -410,7 +555,11 @@ const HeroPage = () => {
                                     disabled={saving}
                                     className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                    {saving ? "Saving..." : "Add Image"}
+                                    {saving
+                                        ? "Saving..."
+                                        : editingHero
+                                            ? "Save Changes"
+                                            : "Add Image"}
                                 </button>
                             </div>
                         </form>

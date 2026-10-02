@@ -18,9 +18,7 @@ const Sidebar = () => {
     { name: "Orders", path: "/admin/orders", icon: ShoppingCart },
     { name: "Payment Review", path: "/admin/payment-review", icon: CreditCard },
     { name: "Failed", path: "/admin/failed", icon: AlertCircle },
-    { name: "Checkouts", path: "/admin/checkouts", icon: ClipboardList },
     { name: "Left At Checkout", path: "/admin/left-at-checkout", icon: LogOut },
-    { name: "Deleted Orders", path: "/admin/deleted-orders", icon: Trash2 },
     { name: "Inventory Product", path: "/admin/inventory", icon: Package },
     { name: "Hero Images" , path: "/admin/heroimage", icon: Image },
   ];

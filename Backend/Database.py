@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 
 MYSQL_USER = "root"
-MYSQL_PASSWORD = "1234"
+MYSQL_PASSWORD = "prism12ol"
 MYSQL_HOST = "localhost"
 MYSQL_PORT = 3306
 MYSQL_DATABASE = "prismwellness"

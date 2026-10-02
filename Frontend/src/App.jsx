@@ -51,8 +51,13 @@ const App = () => {
         <Route
           path="/admin/*"
           element={
-            <Admin/>
+            <Admin />
           }
+        />
+
+        <Route
+          path="/admin"
+          element={<Navigate to="/admin/orders" replace />}
         />
 
         {/* =========================
@@ -90,7 +95,7 @@ const App = () => {
                 <Route path="/catalog" element={<Catalog />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/about" element={<About />} />
-                <Route path='/checkout' element={<Checkout/>} />
+                <Route path='/checkout' element={<Checkout />} />
 
                 {/* Policies */}
                 <Route

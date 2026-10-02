@@ -8,6 +8,9 @@ from Model import Hero_model
 from Database import get_db
 import os
 import uuid
+from sqlalchemy import text
+from PIL import Image
+from io import BytesIO
 
 router = APIRouter(
     prefix="/hero",
@@ -79,6 +82,88 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # -------------------------
 
 async def save_image(image: UploadFile):
+    extension = os.path.splitext(image.filename)[1].lower()
+
+    # -------------------------
+    # CHECK EXTENSION
+    # -------------------------
+
+    if extension not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PNG, JPG, JPEG and WEBP images are allowed"
+        )
+
+    # -------------------------
+    # CHECK CONTENT TYPE
+    # -------------------------
+
+    if image.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid image format"
+        )
+
+    # -------------------------
+    # READ IMAGE
+    # -------------------------
+
+    content = await image.read()
+
+    # -------------------------
+    # CHECK FILE SIZE
+    # -------------------------
+
+    max_size = 100 * 1024  # 100 KB
+
+    if len(content) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail="Image size must not exceed 100 KB"
+        )
+
+    # -------------------------
+    # CHECK IMAGE DIMENSIONS
+    # -------------------------
+
+    try:
+        img = Image.open(BytesIO(content))
+
+        width, height = img.size
+
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or corrupted image file"
+        )
+
+    # -------------------------
+    # CHECK 16:9 RATIO
+    # -------------------------
+
+    if width / height != 16 / 9:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Image must have a 16:9 aspect ratio. "
+                   f"Uploaded image is {width}x{height}."
+        )
+
+    # -------------------------
+    # SAVE IMAGE
+    # -------------------------
+
+    filename = f"{uuid.uuid4()}{extension}"
+
+    file_path = os.path.join(
+        UPLOAD_FOLDER,
+        filename
+    )
+
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    # Always store URL-friendly path
+    return file_path.replace("\\", "/")
     extension = os.path.splitext(image.filename)[1].lower()
 
     if extension not in ALLOWED_EXTENSIONS:
@@ -343,6 +428,13 @@ def delete_hero_image(
 
         db.delete(hero)
         db.commit()
+
+        remaining = db.query(Hero_model.HeroImages).count()
+
+        if remaining == 0:
+            # Reset auto-increment to 1
+            db.execute(text("ALTER TABLE heroimages AUTO_INCREMENT = 1"))
+            db.commit()
 
         return {
             "message": "Hero image deleted successfully"
