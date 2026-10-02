@@ -151,6 +151,20 @@ const Header = () => {
     }
   };
 
+  const handleCheckout = () => {
+    if (cartItems.length === 0) {
+      return;
+    }
+
+    localStorage.setItem(
+      "checkoutItems",
+      JSON.stringify(cartItems)
+    );
+
+    setCartOpen(false);
+    navigate("/checkout");
+  };
+
   return (
     <>
       <header className="relative z-40 w-full">
@@ -1058,24 +1072,25 @@ const Header = () => {
 
                   <button
                     type="button"
+                    onClick={handleCheckout}
                     className="
-                      mt-4
-                      flex
-                      h-[50px]
-                      w-full
-                      cursor-pointer
-                      items-center
-                      justify-center
-                      rounded-[7px]
-                      bg-[#213c67]
-                      text-[15px]
-                      font-semibold
-                      text-white
-                      transition-colors
-                      hover:bg-[#172f55]
-                    "
+    mt-4
+    flex
+    h-[50px]
+    w-full
+    cursor-pointer
+    items-center
+    justify-center
+    rounded-[7px]
+    bg-[#213c67]
+    text-[15px]
+    font-semibold
+    text-white
+    transition-colors
+    hover:bg-[#172f55]
+  "
                   >
-                    <Link to="/checkout">Checkout</Link>
+                    Checkout
                   </button>
 
                   <Link
