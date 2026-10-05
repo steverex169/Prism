@@ -8,6 +8,7 @@ from Endpoint.User_endpoint import router as user_endpoint
 from fastapi.staticfiles import StaticFiles
 from Endpoint.Order_endpoint import router as order_endpoint
 from Endpoint.Product_endpoint import router as product_endpoint
+from Endpoint.shipping_endpoint import router as shipping_router
 
 load_dotenv()
 
@@ -37,6 +38,7 @@ app.include_router(email_endpoint)
 app.include_router(user_endpoint)
 app.include_router(order_endpoint)
 app.include_router(product_endpoint)
+app.include_router(shipping_router)
 
 if __name__ == "__main__":
     import uvicorn
