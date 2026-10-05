@@ -6,6 +6,8 @@ from Endpoint.Email_endpoint import router as email_endpoint
 from fastapi.middleware.cors import CORSMiddleware
 from Endpoint.User_endpoint import router as user_endpoint
 from fastapi.staticfiles import StaticFiles
+from Endpoint.Order_endpoint import router as order_endpoint
+from Endpoint.Product_endpoint import router as product_endpoint
 
 load_dotenv()
 
@@ -33,6 +35,8 @@ app.add_middleware(
 app.include_router(hero_endpoint)
 app.include_router(email_endpoint)
 app.include_router(user_endpoint)
+app.include_router(order_endpoint)
+app.include_router(product_endpoint)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,5 +1,3 @@
-// Catalog.jsx
-
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -11,9 +9,6 @@ import {
   Check,
 } from "lucide-react";
 
-import product1 from "../assets/product1.webp";
-import product2 from "../assets/product2.webp";
-
 import { useCart } from "../context/CartContext";
 
 const API_BASE_URL =
@@ -24,6 +19,10 @@ const Catalog = () => {
 
   const [authLoading, setAuthLoading] = useState(true);
   const [user, setUser] = useState(null);
+
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+
   const [complianceSaving, setComplianceSaving] = useState(false);
   const [complianceError, setComplianceError] = useState("");
 
@@ -35,37 +34,93 @@ const Catalog = () => {
     agreed: false,
   });
 
-  const products = [
-    {
-      id: 1,
-      title: "Bacteriostatic Water",
-      price: 23,
-      image: product1,
-      available: true,
-      createdAt: "2026-09-01",
-      sales: 42,
-      featured: false,
-      relevance: 2,
-    },
-    {
-      id: 2,
-      title: "BPC-157",
-      price: 81,
-      image: product2,
+  /* =========================
+     IMAGE URL
+  ========================== */
 
-      // change this to false whenever product becomes unavailable
-      available: true,
+  const getImageUrl = (image) => {
+    if (!image) {
+      return null;
+    }
 
-      createdAt: "2026-09-12",
-      sales: 88,
-      featured: true,
-      relevance: 1,
-    },
-  ];
+    if (
+      image.startsWith("http://") ||
+      image.startsWith("https://")
+    ) {
+      return image;
+    }
 
-  const highestPrice = Math.max(
-    ...products.map((product) => product.price)
-  );
+    return `${API_BASE_URL}${image}`;
+  };
+
+  /* =========================
+     FETCH PRODUCTS
+  ========================== */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchProducts = async () => {
+      try {
+        setProductsLoading(true);
+
+        const response = await fetch(
+          `${API_BASE_URL}/products/`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.detail || "Failed to load products."
+          );
+        }
+
+        if (!cancelled) {
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error(
+          "Error fetching catalog products:",
+          error
+        );
+
+        if (!cancelled) {
+          setProducts([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setProductsLoading(false);
+        }
+      }
+    };
+
+    fetchProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* =========================
+     HIGHEST PRICE
+  ========================== */
+
+  const highestPrice = useMemo(() => {
+    if (products.length === 0) {
+      return 0;
+    }
+
+    return Math.max(
+      ...products.map(
+        (product) => Number(product.price) || 0
+      )
+    );
+  }, [products]);
 
   const [sortOpen, setSortOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
@@ -102,7 +157,7 @@ const Catalog = () => {
 
     return saved !== null
       ? saved
-      : highestPrice.toString();
+      : "";
   });
 
   const [availability, setAvailability] =
@@ -128,7 +183,6 @@ const Catalog = () => {
       };
     });
 
-
   /* =========================
      AUTH + COMPLIANCE CHECK
   ========================== */
@@ -152,6 +206,7 @@ const Catalog = () => {
           if (!cancelled) {
             setUser(null);
           }
+
           return;
         }
 
@@ -232,6 +287,7 @@ const Catalog = () => {
       setComplianceError(
         "Please complete all required confirmations."
       );
+
       return;
     }
 
@@ -264,7 +320,8 @@ const Catalog = () => {
             .map((item) =>
               typeof item === "string"
                 ? item
-                : item.msg || "Invalid information."
+                : item.msg ||
+                  "Invalid information."
             )
             .join(" ");
         } else if (
@@ -345,16 +402,21 @@ const Catalog = () => {
         ? highestPrice
         : Number(maxPrice);
 
-    list = list.filter(
-      (product) =>
-        product.price >= min &&
-        product.price <= max
-    );
+    list = list.filter((product) => {
+      const price = Number(product.price) || 0;
+
+      return (
+        price >= min &&
+        price <= max
+      );
+    });
 
     /* Availability */
 
-    const { inStock, outOfStock } =
-      availability;
+    const {
+      inStock,
+      outOfStock,
+    } = availability;
 
     if (inStock && !outOfStock) {
       list = list.filter(
@@ -384,56 +446,64 @@ const Catalog = () => {
       case "relevant":
         list.sort(
           (a, b) =>
-            a.relevance - b.relevance
+            (Number(a.relevance) || 0) -
+            (Number(b.relevance) || 0)
         );
         break;
 
       case "best-selling":
         list.sort(
           (a, b) =>
-            b.sales - a.sales
+            (Number(b.sales) || 0) -
+            (Number(a.sales) || 0)
         );
         break;
 
       case "name-az":
         list.sort((a, b) =>
-          a.title.localeCompare(b.title)
+          String(a.name || "").localeCompare(
+            String(b.name || "")
+          )
         );
         break;
 
       case "name-za":
         list.sort((a, b) =>
-          b.title.localeCompare(a.title)
+          String(b.name || "").localeCompare(
+            String(a.name || "")
+          )
         );
         break;
 
       case "price-low":
         list.sort(
           (a, b) =>
-            a.price - b.price
+            (Number(a.price) || 0) -
+            (Number(b.price) || 0)
         );
         break;
 
       case "price-high":
         list.sort(
           (a, b) =>
-            b.price - a.price
+            (Number(b.price) || 0) -
+            (Number(a.price) || 0)
         );
         break;
 
       case "date-old":
         list.sort(
           (a, b) =>
-            new Date(a.createdAt) -
-            new Date(b.createdAt)
+            new Date(a.created_at) -
+            new Date(b.created_at)
         );
         break;
 
       case "date-new":
         list.sort(
           (a, b) =>
-            new Date(b.createdAt) -
-            new Date(a.createdAt)
+            new Date(b.created_at) -
+            new Date(a.created_at)
         );
         break;
 
@@ -477,6 +547,10 @@ const Catalog = () => {
       : "Sort";
   };
 
+  /* =========================
+     AUTH LOADING
+  ========================== */
+
   if (authLoading) {
     return (
       <section className="flex min-h-[420px] items-center justify-center bg-white px-5">
@@ -486,6 +560,10 @@ const Catalog = () => {
       </section>
     );
   }
+
+  /* =========================
+     ACCOUNT REQUIRED
+  ========================== */
 
   if (!user) {
     return (
@@ -519,6 +597,10 @@ const Catalog = () => {
     );
   }
 
+  /* =========================
+     COMPLIANCE
+  ========================== */
+
   if (!user.compliance_complete) {
     return (
       <section className="w-full bg-white px-5 py-12 sm:px-6 md:py-16">
@@ -543,29 +625,39 @@ const Catalog = () => {
 
                 <select
                   name="research_field"
-                  value={complianceForm.research_field}
-                  onChange={handleComplianceChange}
+                  value={
+                    complianceForm.research_field
+                  }
+                  onChange={
+                    handleComplianceChange
+                  }
                   required
                   className="h-[50px] w-full rounded-[7px] border border-[#d7dce3] bg-white px-4 text-[14px] text-[#1f2937] outline-none focus:border-[#159bc7] focus:ring-2 focus:ring-[#159bc7]/10"
                 >
                   <option value="">
                     Select your research field
                   </option>
+
                   <option value="Pharmacology / Drug Discovery">
                     Pharmacology / Drug Discovery
                   </option>
+
                   <option value="Biochemistry & Molecular Biology">
                     Biochemistry & Molecular Biology
                   </option>
+
                   <option value="Academic Research">
                     Academic Research
                   </option>
+
                   <option value="Contract Research Organization (CRO)">
                     Contract Research Organization (CRO)
                   </option>
+
                   <option value="Analytical Chemistry Laboratory">
                     Analytical Chemistry Laboratory
                   </option>
+
                   <option value="Other Qualified Research">
                     Other Qualified Research
                   </option>
@@ -576,10 +668,15 @@ const Catalog = () => {
                 <input
                   type="checkbox"
                   name="age_verified"
-                  checked={complianceForm.age_verified}
-                  onChange={handleComplianceChange}
+                  checked={
+                    complianceForm.age_verified
+                  }
+                  onChange={
+                    handleComplianceChange
+                  }
                   className="mt-[3px] h-[16px] w-[16px] shrink-0 cursor-pointer accent-[#159bc7]"
                 />
+
                 <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
                   I confirm that I am 21 years of age or older.
                 </span>
@@ -589,10 +686,15 @@ const Catalog = () => {
                 <input
                   type="checkbox"
                   name="qualified_researcher"
-                  checked={complianceForm.qualified_researcher}
-                  onChange={handleComplianceChange}
+                  checked={
+                    complianceForm.qualified_researcher
+                  }
+                  onChange={
+                    handleComplianceChange
+                  }
                   className="mt-[3px] h-[16px] w-[16px] shrink-0 cursor-pointer accent-[#159bc7]"
                 />
+
                 <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
                   I confirm that I am a qualified research professional.
                 </span>
@@ -602,10 +704,15 @@ const Catalog = () => {
                 <input
                   type="checkbox"
                   name="research_use_acknowledged"
-                  checked={complianceForm.research_use_acknowledged}
-                  onChange={handleComplianceChange}
+                  checked={
+                    complianceForm.research_use_acknowledged
+                  }
+                  onChange={
+                    handleComplianceChange
+                  }
                   className="mt-[3px] h-[16px] w-[16px] shrink-0 cursor-pointer accent-[#159bc7]"
                 />
+
                 <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
                   I acknowledge that all products are sold for research use only.
                 </span>
@@ -615,12 +722,18 @@ const Catalog = () => {
                 <input
                   type="checkbox"
                   name="agreed"
-                  checked={complianceForm.agreed}
-                  onChange={handleComplianceChange}
+                  checked={
+                    complianceForm.agreed
+                  }
+                  onChange={
+                    handleComplianceChange
+                  }
                   className="mt-[3px] h-[16px] w-[16px] shrink-0 cursor-pointer accent-[#159bc7]"
                 />
+
                 <span className="text-[13px] leading-[1.6] text-[#626975] sm:text-[14px]">
                   I agree to the{" "}
+
                   <Link
                     to="/terms"
                     className="font-medium text-[#159bc7] hover:underline"
@@ -656,6 +769,10 @@ const Catalog = () => {
     );
   }
 
+  /* =========================
+     CATALOG
+  ========================== */
+
   return (
     <section className="w-full bg-white font-sans">
       <div
@@ -663,32 +780,26 @@ const Catalog = () => {
           mx-auto
           w-full
           max-w-[1440px]
-
           px-5
           py-10
-
           sm:px-6
           sm:py-12
-
           md:px-8
           md:py-14
-
           lg:px-10
           lg:py-16
-
           xl:px-12
-
           2xl:px-0
         "
       >
         {/* Heading */}
+
         <h1
           className="
             text-[34px]
             font-bold
             tracking-[-0.025em]
             text-[#171728]
-
             sm:text-[40px]
             md:text-[46px]
             lg:text-[52px]
@@ -707,20 +818,17 @@ const Catalog = () => {
             flex
             flex-col
             gap-5
-
             sm:mt-16
-
             md:flex-row
             md:items-center
             md:justify-between
           "
         >
           {/* Left Filters */}
+
           <div className="flex flex-wrap items-center gap-7">
 
-            {/* =========================
-                AVAILABILITY
-            ========================== */}
+            {/* Availability */}
 
             <div className="relative">
               <button
@@ -744,7 +852,6 @@ const Catalog = () => {
                   transition-colors
                   duration-200
                   hover:text-black
-
                   sm:text-[15px]
                 "
               >
@@ -755,7 +862,6 @@ const Catalog = () => {
                   strokeWidth={1.6}
                   className={`
                     transition-transform
-
                     ${
                       availabilityOpen
                         ? "rotate-180"
@@ -782,6 +888,7 @@ const Catalog = () => {
                   "
                 >
                   {/* In Stock */}
+
                   <label
                     className="
                       flex
@@ -797,7 +904,6 @@ const Catalog = () => {
                         setAvailability(
                           (prev) => ({
                             ...prev,
-
                             inStock:
                               !prev.inStock,
                           })
@@ -812,7 +918,6 @@ const Catalog = () => {
                         justify-center
                         rounded-[3px]
                         border
-
                         ${
                           availability.inStock
                             ? "border-[#16385f] bg-[#16385f] text-white"
@@ -834,6 +939,7 @@ const Catalog = () => {
                   </label>
 
                   {/* Out of Stock */}
+
                   <label
                     className="
                       flex
@@ -849,7 +955,6 @@ const Catalog = () => {
                         setAvailability(
                           (prev) => ({
                             ...prev,
-
                             outOfStock:
                               !prev.outOfStock,
                           })
@@ -864,7 +969,6 @@ const Catalog = () => {
                         justify-center
                         rounded-[3px]
                         border
-
                         ${
                           availability.outOfStock
                             ? "border-[#16385f] bg-[#16385f] text-white"
@@ -888,9 +992,7 @@ const Catalog = () => {
               )}
             </div>
 
-            {/* =========================
-                PRICE
-            ========================== */}
+            {/* Price */}
 
             <div className="relative">
               <button
@@ -914,7 +1016,6 @@ const Catalog = () => {
                   transition-colors
                   duration-200
                   hover:text-black
-
                   sm:text-[15px]
                 "
               >
@@ -925,7 +1026,6 @@ const Catalog = () => {
                   strokeWidth={1.6}
                   className={`
                     transition-transform
-
                     ${
                       priceOpen
                         ? "rotate-180"
@@ -955,6 +1055,7 @@ const Catalog = () => {
                   <div className="flex items-center gap-3">
 
                     {/* Minimum */}
+
                     <div
                       className="
                         flex
@@ -998,6 +1099,7 @@ const Catalog = () => {
                     </span>
 
                     {/* Maximum */}
+
                     <div
                       className="
                         flex
@@ -1048,17 +1150,15 @@ const Catalog = () => {
             </div>
           </div>
 
-          {/* =========================
-              RIGHT CONTROLS
-          ========================== */}
+          {/* Right Controls */}
 
           <div className="flex flex-wrap items-center gap-4 sm:gap-5">
-
             <span className="text-[14px] text-[#666674] sm:text-[15px]">
               {filteredProducts.length} items
             </span>
 
             {/* Sort */}
+
             <div className="relative">
               <button
                 type="button"
@@ -1080,7 +1180,6 @@ const Catalog = () => {
                   transition-colors
                   duration-200
                   hover:text-black
-
                   sm:text-[15px]
                 "
               >
@@ -1091,7 +1190,6 @@ const Catalog = () => {
                   strokeWidth={1.6}
                   className={`
                     transition-transform
-
                     ${
                       sortOpen
                         ? "rotate-180"
@@ -1128,9 +1226,7 @@ const Catalog = () => {
                             value
                           );
 
-                          setSortOpen(
-                            false
-                          );
+                          setSortOpen(false);
                         }}
                         className={`
                           flex
@@ -1143,7 +1239,6 @@ const Catalog = () => {
                           text-left
                           text-[14px]
                           transition-colors
-
                           ${
                             sortType ===
                             value
@@ -1171,6 +1266,7 @@ const Catalog = () => {
             </div>
 
             {/* Normal Grid */}
+
             <button
               type="button"
               aria-label="Normal grid"
@@ -1185,7 +1281,6 @@ const Catalog = () => {
                 items-center
                 justify-center
                 rounded-[4px]
-
                 ${
                   viewMode === "normal"
                     ? "bg-[#f1f1f3] text-[#31313c]"
@@ -1200,6 +1295,7 @@ const Catalog = () => {
             </button>
 
             {/* Compact Grid */}
+
             <button
               type="button"
               aria-label="Compact grid"
@@ -1214,7 +1310,6 @@ const Catalog = () => {
                 items-center
                 justify-center
                 rounded-[4px]
-
                 ${
                   viewMode === "compact"
                     ? "bg-[#f1f1f3] text-[#31313c]"
@@ -1239,243 +1334,254 @@ const Catalog = () => {
             mt-7
             grid
             gap-y-10
-
             ${
               viewMode === "normal"
                 ? `
                     grid-cols-1
                     gap-x-5
-
                     sm:grid-cols-2
-
                     lg:grid-cols-3
-
                     xl:grid-cols-4
                   `
                 : `
                     grid-cols-2
                     gap-x-4
-
                     sm:grid-cols-3
-
                     md:grid-cols-4
-
                     lg:grid-cols-5
-
                     xl:grid-cols-6
                   `
             }
           `}
         >
-          {filteredProducts.map(
-            (product) => (
-              <article
-                key={product.id}
-                className={`
-                  group
-                  relative
-                  rounded-[12px]
-                  bg-white
-                  transition-all
-                  duration-300
-
-                  hover:-translate-y-[5px]
-                  hover:shadow-[0_14px_35px_rgba(5,22,39,0.16)]
-
-                  ${
-                    viewMode ===
-                    "compact"
-                      ? "max-w-[180px]"
-                      : "w-full"
-                  }
-                `}
-              >
-                {/* Product Image */}
-                <div
-                  className="
+          {productsLoading ? (
+            <div className="col-span-full py-20 text-center">
+              <p className="text-[16px] text-[#666674]">
+                Loading products...
+              </p>
+            </div>
+          ) : (
+            filteredProducts.map(
+              (product) => (
+                <article
+                  key={product.id}
+                  className={`
+                    group
                     relative
-                    aspect-square
-                    overflow-hidden
                     rounded-[12px]
-                    bg-[#f1f1f3]
-                  "
+                    bg-white
+                    transition-all
+                    duration-300
+                    hover:-translate-y-[5px]
+                    hover:shadow-[0_14px_35px_rgba(5,22,39,0.16)]
+                    ${
+                      viewMode === "compact"
+                        ? "max-w-[180px]"
+                        : "w-full"
+                    }
+                  `}
                 >
-                  <img
-                    src={product.image}
-                    alt={product.title}
-                    className="
-                      h-full
-                      w-full
-                      object-cover
-                      transition-transform
-                      duration-300
-                      group-hover:scale-[1.03]
-                    "
-                  />
+                  {/* Product Image */}
 
-                  {/* Availability */}
-                  {!product.available && (
+                  <div
+                    className="
+                      relative
+                      aspect-square
+                      overflow-hidden
+                      rounded-[12px]
+                      bg-[#f1f1f3]
+                    "
+                  >
+                    {product.image ? (
+                      <img
+                        src={getImageUrl(
+                          product.image
+                        )}
+                        alt={product.name}
+                        className="
+                          h-full
+                          w-full
+                          object-cover
+                          transition-transform
+                          duration-300
+                          group-hover:scale-[1.03]
+                        "
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[13px] text-[#9696a3]">
+                        No image
+                      </div>
+                    )}
+
+                    {/* Availability */}
+
+                    {!product.available && (
+                      <div
+                        className="
+                          absolute
+                          left-3
+                          top-3
+                          rounded-full
+                          bg-white/95
+                          px-3
+                          py-1
+                          text-[11px]
+                          font-medium
+                          text-[#62626c]
+                          shadow-sm
+                        "
+                      >
+                        Out of stock
+                      </div>
+                    )}
+
+                    {/* Add To Cart */}
+
                     <div
                       className="
                         absolute
-                        left-3
-                        top-3
-                        rounded-full
-                        bg-white/95
-                        px-3
-                        py-1
-                        text-[11px]
-                        font-medium
-                        text-[#62626c]
-                        shadow-sm
+                        bottom-3
+                        right-3
+                        z-20
                       "
                     >
-                      Out of stock
-                    </div>
-                  )}
-
-                  {/* Add To Cart */}
-                  <div
-                    className="
-                      absolute
-                      bottom-3
-                      right-3
-                      z-20
-                    "
-                  >
-                    <button
-                      type="button"
-                      disabled={
-                        !product.available
-                      }
-                      onClick={(e) => {
-                        e.stopPropagation();
-
-                        if (
-                          product.available
-                        ) {
-                          addToCart(
-                            product
-                          );
+                      <button
+                        type="button"
+                        disabled={
+                          !product.available
                         }
-                      }}
-                      className={`
-                        flex
-                        h-[42px]
-                        items-center
-                        overflow-hidden
-                        rounded-[9px]
-                        text-white
-                        transition-all
-                        duration-300
+                        onClick={(e) => {
+                          e.stopPropagation();
 
-                        ${
-                          product.available
-                            ? `
-                                cursor-pointer
-                                bg-[#17365c]
-                                group-hover:bg-[#20aaf2]
-                              `
-                            : `
-                                cursor-not-allowed
-                                bg-[#9da4ad]
-                                opacity-80
-                              `
-                        }
-                      `}
-                    >
-                      <span
-                        className="
+                          if (
+                            product.available
+                          ) {
+                            addToCart({
+                              ...product,
+                              title: product.name,
+                              price: Number(
+                                product.price
+                              ),
+                              image:
+                                getImageUrl(
+                                  product.image
+                                ),
+                            });
+                          }
+                        }}
+                        className={`
                           flex
                           h-[42px]
-                          w-[42px]
-                          shrink-0
                           items-center
-                          justify-center
-                        "
-                      >
-                        <ShoppingBag
-                          size={20}
-                          strokeWidth={1.8}
-                        />
-                      </span>
-
-                      <span
-                        className={`
                           overflow-hidden
-                          whitespace-nowrap
-                          text-[14px]
-                          font-semibold
+                          rounded-[9px]
+                          text-white
                           transition-all
                           duration-300
-
                           ${
                             product.available
                               ? `
-                                  max-w-0
-                                  pr-0
-                                  opacity-0
-
-                                  group-hover:max-w-[120px]
-                                  group-hover:pr-4
-                                  group-hover:opacity-100
+                                  cursor-pointer
+                                  bg-[#17365c]
+                                  group-hover:bg-[#20aaf2]
                                 `
                               : `
-                                  max-w-[120px]
-                                  pr-4
-                                  opacity-100
+                                  cursor-not-allowed
+                                  bg-[#9da4ad]
+                                  opacity-80
                                 `
                           }
                         `}
                       >
-                        {product.available
-                          ? "Add to cart"
-                          : "Out of stock"}
-                      </span>
-                    </button>
+                        <span
+                          className="
+                            flex
+                            h-[42px]
+                            w-[42px]
+                            shrink-0
+                            items-center
+                            justify-center
+                          "
+                        >
+                          <ShoppingBag
+                            size={20}
+                            strokeWidth={1.8}
+                          />
+                        </span>
+
+                        <span
+                          className={`
+                            overflow-hidden
+                            whitespace-nowrap
+                            text-[14px]
+                            font-semibold
+                            transition-all
+                            duration-300
+                            ${
+                              product.available
+                                ? `
+                                    max-w-0
+                                    pr-0
+                                    opacity-0
+                                    group-hover:max-w-[120px]
+                                    group-hover:pr-4
+                                    group-hover:opacity-100
+                                  `
+                                : `
+                                    max-w-[120px]
+                                    pr-4
+                                    opacity-100
+                                  `
+                            }
+                          `}
+                        >
+                          {product.available
+                            ? "Add to cart"
+                            : "Out of stock"}
+                        </span>
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Product Title */}
-                <h3
-                  className={`
-                    mt-3
-                    font-normal
-                    leading-[1.35]
-                    text-[#4e4e5c]
+                  {/* Product Title */}
 
-                    ${
-                      viewMode ===
-                      "compact"
-                        ? "text-[13px]"
-                        : "text-[15px] sm:text-[16px]"
-                    }
-                  `}
-                >
-                  {product.title}
-                </h3>
+                  <h3
+                    className={`
+                      mt-3
+                      font-normal
+                      leading-[1.35]
+                      text-[#4e4e5c]
+                      ${
+                        viewMode === "compact"
+                          ? "text-[13px]"
+                          : "text-[15px] sm:text-[16px]"
+                      }
+                    `}
+                  >
+                    {product.name}
+                  </h3>
 
-                {/* Price */}
-                <p
-                  className={`
-                    mt-1
-                    font-bold
-                    text-[#173658]
+                  {/* Price */}
 
-                    ${
-                      viewMode ===
-                      "compact"
-                        ? "text-[12px]"
-                        : "text-[14px] sm:text-[15px]"
-                    }
-                  `}
-                >
-                  $
-                  {product.price.toFixed(
-                    2
-                  )}
-                </p>
-              </article>
+                  <p
+                    className={`
+                      mt-1
+                      font-bold
+                      text-[#173658]
+                      ${
+                        viewMode === "compact"
+                          ? "text-[12px]"
+                          : "text-[14px] sm:text-[15px]"
+                      }
+                    `}
+                  >
+                    $
+                    {Number(
+                      product.price
+                    ).toFixed(2)}
+                  </p>
+                </article>
+              )
             )
           )}
         </div>
@@ -1484,15 +1590,14 @@ const Catalog = () => {
             EMPTY STATE
         ========================== */}
 
-        {filteredProducts.length ===
-          0 && (
-          <div className="py-20 text-center">
-            <p className="text-[16px] text-[#666674]">
-              No products match your
-              selected filters.
-            </p>
-          </div>
-        )}
+        {!productsLoading &&
+          filteredProducts.length === 0 && (
+            <div className="py-20 text-center">
+              <p className="text-[16px] text-[#666674]">
+                No current products exists
+              </p>
+            </div>
+          )}
       </div>
     </section>
   );

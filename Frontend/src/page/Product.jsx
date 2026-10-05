@@ -1,29 +1,19 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
-import product1 from "../assets/product1.webp";
-import product2 from "../assets/product2.webp";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const Product = () => {
-    const [products, setProducts] = useState([
-        {
-            id: 1,
-            name: "Bacteriostatic Water",
-            price: 23,
-            image: product1,
-        },
-        {
-            id: 2,
-            name: "BPC-157",
-            price: 81,
-            image: product2,
-        },
-    ]);
+    const [products, setProducts] = useState([]);
 
     const [search, setSearch] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
 
     const fileInputRef = useRef(null);
 
@@ -33,9 +23,67 @@ const Product = () => {
         image: null,
     });
 
+    // =========================
+    // IMAGE URL
+    // =========================
+
+    const getImageUrl = (image) => {
+        if (!image) return null;
+
+        if (image.startsWith("http://") || image.startsWith("https://")) {
+            return image;
+        }
+
+        return `${API_BASE_URL}${image}`;
+    };
+
+    // =========================
+    // GET PRODUCTS
+    // =========================
+
+    const fetchProducts = async () => {
+        try {
+            setLoading(true);
+
+            const response = await fetch(`${API_BASE_URL}/products/`, {
+                method: "GET",
+                credentials: "include",
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data?.detail || "Failed to fetch products."
+                );
+            }
+
+            setProducts(data);
+        } catch (error) {
+            console.error("Error fetching products:", error);
+            alert(error.message || "Failed to load products.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
+    // =========================
+    // SEARCH
+    // =========================
+
     const filteredProducts = products.filter((product) =>
-        product.name.toLowerCase().includes(search.toLowerCase())
+        String(product.name || "")
+            .toLowerCase()
+            .includes(search.toLowerCase().trim())
     );
+
+    // =========================
+    // OPEN ADD MODAL
+    // =========================
 
     const openAddModal = () => {
         setEditingProduct(null);
@@ -55,6 +103,10 @@ const Product = () => {
         setShowModal(true);
     };
 
+    // =========================
+    // OPEN EDIT MODAL
+    // =========================
+
     const openEditModal = (product) => {
         setEditingProduct(product);
 
@@ -64,7 +116,7 @@ const Product = () => {
             image: null,
         });
 
-        setImagePreview(product.image);
+        setImagePreview(getImageUrl(product.image));
 
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -72,6 +124,10 @@ const Product = () => {
 
         setShowModal(true);
     };
+
+    // =========================
+    // CLOSE MODAL
+    // =========================
 
     const closeModal = () => {
         setShowModal(false);
@@ -90,6 +146,10 @@ const Product = () => {
         }
     };
 
+    // =========================
+    // INPUT CHANGE
+    // =========================
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
 
@@ -98,6 +158,10 @@ const Product = () => {
             [name]: value,
         }));
     };
+
+    // =========================
+    // IMAGE CHANGE
+    // =========================
 
     const handleImageChange = (e) => {
         const file = e.target.files?.[0];
@@ -116,67 +180,130 @@ const Product = () => {
         }));
 
         const previewUrl = URL.createObjectURL(file);
+
         setImagePreview(previewUrl);
     };
 
-    const handleSubmit = (e) => {
+    // =========================
+    // CREATE / UPDATE PRODUCT
+    // =========================
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.name.trim()) {
+        const productName = formData.name.trim();
+        const productPrice = Number(formData.price);
+
+        if (!productName) {
             alert("Please enter a product name.");
             return;
         }
 
-        if (formData.price === "" || Number(formData.price) < 0) {
+        if (
+            formData.price === "" ||
+            Number.isNaN(productPrice) ||
+            productPrice < 0
+        ) {
             alert("Please enter a valid product price.");
             return;
         }
 
-        if (editingProduct) {
-            setProducts((prev) =>
-                prev.map((product) =>
-                    product.id === editingProduct.id
-                        ? {
-                              ...product,
-                              name: formData.name.trim(),
-                              price: Number(formData.price),
-                              image:
-                                  formData.image
-                                      ? imagePreview
-                                      : product.image,
-                          }
-                        : product
-                )
-            );
-        } else {
-            const newProduct = {
-                id:
-                    products.length > 0
-                        ? Math.max(...products.map((product) => product.id)) + 1
-                        : 1,
-                name: formData.name.trim(),
-                price: Number(formData.price),
-                image:
-                    imagePreview ||
-                    "https://via.placeholder.com/400x400?text=Product",
-            };
+        try {
+            setSaving(true);
 
-            setProducts((prev) => [...prev, newProduct]);
+            const url = editingProduct
+                ? `${API_BASE_URL}/products/${editingProduct.id}`
+                : `${API_BASE_URL}/products/`;
+
+            const method = editingProduct ? "PUT" : "POST";
+
+            // =========================
+            // FORM DATA
+            // =========================
+
+            const data = new FormData();
+
+            data.append("name", productName);
+            data.append("price", productPrice.toString());
+
+            if (formData.image) {
+                data.append("image", formData.image);
+            }
+
+            const response = await fetch(url, {
+                method,
+                credentials: "include",
+                body: data,
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    responseData?.detail || "Failed to save product."
+                );
+            }
+
+            if (editingProduct) {
+                setProducts((prev) =>
+                    prev.map((product) =>
+                        product.id === responseData.id
+                            ? responseData
+                            : product
+                    )
+                );
+            } else {
+                setProducts((prev) => [...prev, responseData]);
+            }
+
+            closeModal();
+        } catch (error) {
+            console.error("Error saving product:", error);
+            alert(error.message || "Failed to save product.");
+        } finally {
+            setSaving(false);
         }
-
-        closeModal();
     };
 
-    const handleDelete = (product) => {
+    // =========================
+    // DELETE PRODUCT
+    // =========================
+
+    const handleDelete = async (product) => {
         const confirmed = window.confirm(
             `Are you sure you want to delete "${product.name}"?`
         );
 
         if (!confirmed) return;
 
-        setProducts((prev) =>
-            prev.filter((item) => item.id !== product.id)
-        );
+        try {
+            setDeletingId(product.id);
+
+            const response = await fetch(
+                `${API_BASE_URL}/products/${product.id}`,
+                {
+                    method: "DELETE",
+                    credentials: "include",
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data?.detail || "Failed to delete product."
+                );
+            }
+
+            setProducts((prev) =>
+                prev.filter((item) => item.id !== product.id)
+            );
+        } catch (error) {
+            console.error("Error deleting product:", error);
+            alert(error.message || "Failed to delete product.");
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     return (
@@ -235,7 +362,16 @@ const Product = () => {
                         </thead>
 
                         <tbody>
-                            {filteredProducts.length === 0 ? (
+                            {loading ? (
+                                <tr>
+                                    <td
+                                        colSpan="4"
+                                        className="px-5 py-12 text-center text-sm text-slate-500"
+                                    >
+                                        Loading products...
+                                    </td>
+                                </tr>
+                            ) : filteredProducts.length === 0 ? (
                                 <tr>
                                     <td
                                         colSpan="4"
@@ -246,7 +382,9 @@ const Product = () => {
                                         </p>
 
                                         <p className="mt-1 text-xs text-slate-400">
-                                            Try a different search.
+                                            {search
+                                                ? "Try a different search."
+                                                : "Add your first product."}
                                         </p>
                                     </td>
                                 </tr>
@@ -265,11 +403,21 @@ const Product = () => {
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                                                    <img
-                                                        src={product.image}
-                                                        alt={product.name}
-                                                        className="h-full w-full object-cover"
-                                                    />
+                                                    {product.image ? (
+                                                        <img
+                                                            src={getImageUrl(
+                                                                product.image
+                                                            )}
+                                                            alt={
+                                                                product.name
+                                                            }
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                                                            No image
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <span className="text-sm font-semibold text-slate-800">
@@ -280,7 +428,8 @@ const Product = () => {
 
                                         {/* Price */}
                                         <td className="px-5 py-4 text-sm font-semibold text-slate-800">
-                                            ${product.price.toFixed(2)}
+                                            $
+                                            {Number(product.price).toFixed(2)}
                                         </td>
 
                                         {/* Actions */}
@@ -291,7 +440,11 @@ const Product = () => {
                                                     onClick={() =>
                                                         openEditModal(product)
                                                     }
-                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-[#0D59F2] hover:bg-[#EFF6FF] hover:text-[#0D59F2]"
+                                                    disabled={
+                                                        deletingId ===
+                                                        product.id
+                                                    }
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-[#0D59F2] hover:bg-[#EFF6FF] hover:text-[#0D59F2] disabled:cursor-not-allowed disabled:opacity-50"
                                                     title="Edit product"
                                                 >
                                                     <Pencil size={15} />
@@ -302,7 +455,11 @@ const Product = () => {
                                                     onClick={() =>
                                                         handleDelete(product)
                                                     }
-                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-500 transition hover:bg-red-50"
+                                                    disabled={
+                                                        deletingId ===
+                                                        product.id
+                                                    }
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                                                     title="Delete product"
                                                 >
                                                     <Trash2 size={15} />
@@ -382,7 +539,9 @@ const Product = () => {
                                 />
 
                                 <p className="mt-2 text-xs text-slate-400">
-                                    Upload PNG, JPG, JPEG or WEBP image.
+                                    {editingProduct
+                                        ? "Select a new image only if you want to replace the current image."
+                                        : "Upload PNG, JPG, JPEG or WEBP image."}
                                 </p>
 
                                 {imagePreview && (
@@ -425,14 +584,16 @@ const Product = () => {
                                 <button
                                     type="button"
                                     onClick={closeModal}
-                                    className="h-11 rounded-lg border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                    disabled={saving}
+                                    className="h-11 rounded-lg border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
 
                                 <button
                                     type="submit"
-                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#0D59F2] px-5 text-sm font-semibold text-white transition hover:bg-[#0848c7]"
+                                    disabled={saving}
+                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#0D59F2] px-5 text-sm font-semibold text-white transition hover:bg-[#0848c7] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {editingProduct ? (
                                         <Pencil size={16} />
@@ -440,9 +601,11 @@ const Product = () => {
                                         <Plus size={17} />
                                     )}
 
-                                    {editingProduct
-                                        ? "Save Changes"
-                                        : "Add Product"}
+                                    {saving
+                                        ? "Saving..."
+                                        : editingProduct
+                                          ? "Save Changes"
+                                          : "Add Product"}
                                 </button>
                             </div>
                         </form>

@@ -12,6 +12,9 @@ import {
 import product1 from "../assets/product1.webp";
 import product2 from "../assets/product2.webp";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "";
+
 const Checkout = () => {
   const [selectedMethod, setSelectedMethod] = useState("card");
   const [selectedShipping, setSelectedShipping] = useState("standard");
@@ -20,6 +23,7 @@ const Checkout = () => {
   const [showPromo, setShowPromo] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [shippingInfo, setShippingInfo] = useState({
     fullName: "",
@@ -126,6 +130,153 @@ const Checkout = () => {
       setCheckoutItems([]);
     }
   }, []);
+
+  const handlePlaceOrder = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    if (checkoutItems.length === 0) {
+      alert("Your cart is empty.");
+      return;
+    }
+
+    if (
+      !shippingInfo.fullName.trim() ||
+      !shippingInfo.email.trim() ||
+      !shippingInfo.phone.trim() ||
+      !shippingInfo.streetAddress.trim() ||
+      !shippingInfo.city.trim() ||
+      !shippingInfo.zipCode.trim() ||
+      !shippingInfo.state.trim()
+    ) {
+      alert("Please complete all shipping information.");
+      return;
+    }
+
+    const subtotal = checkoutItems.reduce(
+      (total, item) =>
+        total +
+        Number(item.price) * Number(item.quantity),
+      0
+    );
+
+    const discount = promoApplied
+      ? subtotal * 0.1
+      : 0;
+
+    const shipping =
+      selectedShipping === "overnight"
+        ? 75
+        : 19.99;
+
+    const finalTotal =
+      subtotal - discount + shipping;
+
+    const totalItems = checkoutItems.reduce(
+      (total, item) =>
+        total + Number(item.quantity),
+      0
+    );
+
+    const paymentMethod =
+      selectedMethod === "card"
+        ? "Credit / Debit Card"
+        : selectedMethod === "cashapp"
+          ? "Cash App"
+          : "Venmo";
+
+    const orderNumber =
+      `ORD-${Date.now()}`;
+
+    const orderData = {
+      order_number: orderNumber,
+
+      customer_name:
+        shippingInfo.fullName.trim(),
+
+      customer_email:
+        shippingInfo.email.trim(),
+
+      items: totalItems,
+
+      total: Math.round(finalTotal),
+
+      payment: "Unpaid",
+
+      payment_method: paymentMethod,
+
+      promotion: promoApplied
+        ? promoCode.trim()
+        : null,
+
+      status: "pending",
+    };
+
+    try {
+      setIsSubmitting(true);
+
+      const response = await fetch(
+        `${API_BASE_URL}/orders/`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          credentials: "include",
+
+          body: JSON.stringify(orderData),
+        }
+      );
+
+      const contentType =
+        response.headers.get("content-type");
+
+      if (!contentType?.includes("application/json")) {
+        throw new Error(
+          "Server returned an invalid response."
+        );
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+          "Failed to create order."
+        );
+      }
+
+      console.log(
+        "Order created successfully:",
+        data
+      );
+
+      localStorage.removeItem("checkoutItems");
+
+      setCheckoutItems([]);
+
+      alert(
+        `Order ${data.order_number} created successfully.`
+      );
+
+    } catch (error) {
+      console.error(
+        "Order creation failed:",
+        error
+      );
+
+      alert(
+        error.message ||
+        "Unable to create your order."
+      );
+
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-white px-4 py-8 sm:px-6 lg:px-10">
@@ -1029,29 +1180,32 @@ const Checkout = () => {
                     </div>
                   </div>
 
-                  {/* PAYMENT CTA */}
                   <button
                     type="button"
+                    onClick={handlePlaceOrder}
+                    disabled={isSubmitting}
                     className="
-            mt-6
-            flex
-            h-14
-            w-full
-            items-center
-            justify-center
-            gap-2
-            rounded-xl
-            bg-[#0D59F2]
-            px-5
-            text-sm
-            font-bold
-            text-white
-            shadow-[0_6px_16px_rgba(13,89,242,0.20)]
-            transition-all
-            hover:bg-[#0848C7]
-            hover:shadow-[0_8px_20px_rgba(13,89,242,0.25)]
-            active:scale-[0.99]
-          "
+    mt-6
+    flex
+    h-14
+    w-full
+    items-center
+    justify-center
+    gap-2
+    rounded-xl
+    bg-[#0D59F2]
+    px-5
+    text-sm
+    font-bold
+    text-white
+    shadow-[0_6px_16px_rgba(13,89,242,0.20)]
+    transition-all
+    hover:bg-[#0848C7]
+    hover:shadow-[0_8px_20px_rgba(13,89,242,0.25)]
+    active:scale-[0.99]
+    disabled:cursor-not-allowed
+    disabled:opacity-60
+  "
                   >
 
                     {/* CARD */}
@@ -1065,14 +1219,13 @@ const Checkout = () => {
                     )}
 
                     <span>
-                      {selectedMethod === "card" &&
-                        "Pay by Card"}
-
-                      {selectedMethod === "cashapp" &&
-                        "$ Pay with Cash App"}
-
-                      {selectedMethod === "venmo" &&
-                        "Pay with Venmo"}
+                      {isSubmitting
+                        ? "Placing Order..."
+                        : selectedMethod === "card"
+                          ? "Pay by Card"
+                          : selectedMethod === "cashapp"
+                            ? "$ Pay with Cash App"
+                            : "Pay with Venmo"}
                     </span>
 
                     <span>

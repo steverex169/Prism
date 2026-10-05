@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import StatCard from "../component/Statcard.jsx";
 import {
     ShoppingCart,
@@ -8,100 +8,81 @@ import {
     Search,
     Filter,
     Mail,
+    Pencil,
+    Trash2,
+    X,
+    Save,
 } from "lucide-react";
+
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "";
 
 const Order = () => {
     // --------------------------------
-    // SAMPLE ORDERS
-    // Replace this later with API data
+    // ORDERS FROM BACKEND API
     // --------------------------------
 
-    const [orders] = useState([
-        {
-            id: 1001,
-            customer: "John Doe",
-            email: "john@example.com",
-            items: 3,
-            total: "$149.00",
-            promotion: "WELCOME10",
-            payment: "Paid",
-            method: "Visa",
-            status: "Processing",
-            date: "Oct 02, 2026",
-        },
-        {
-            id: 1002,
-            customer: "Sarah Smith",
-            email: "sarah@example.com",
-            items: 1,
-            total: "$59.00",
-            promotion: "—",
-            payment: "Paid",
-            method: "PayPal",
-            status: "Shipped",
-            date: "Oct 01, 2026",
-        },
-        {
-            id: 1003,
-            customer: "Michael Brown",
-            email: "michael@example.com",
-            items: 5,
-            total: "$320.00",
-            promotion: "SAVE20",
-            payment: "Unpaid",
-            method: "Payment Pending",
-            status: "Pending",
-            date: "Sep 30, 2026",
-        },
-        {
-            id: 1004,
-            customer: "Emily Johnson",
-            email: "emily@example.com",
-            items: 2,
-            total: "$99.00",
-            promotion: "—",
-            payment: "Paid",
-            method: "Mastercard",
-            status: "Delivered",
-            date: "Sep 29, 2026",
-        },
-        {
-            id: 1005,
-            customer: "David Wilson",
-            email: "david@example.com",
-            items: 4,
-            total: "$210.00",
-            promotion: "NEWUSER",
-            payment: "Unpaid",
-            method: "Other / Contact for Payment",
-            status: "Checkout",
-            date: "Sep 28, 2026",
-        },
-        {
-            id: 1006,
-            customer: "Olivia Davis",
-            email: "olivia@example.com",
-            items: 2,
-            total: "$85.00",
-            promotion: "—",
-            payment: "Paid",
-            method: "American Express",
-            status: "Cancelled",
-            date: "Sep 27, 2026",
-        },
-        {
-            id: 1007,
-            customer: "James Miller",
-            email: "james@example.com",
-            items: 1,
-            total: "$45.00",
-            promotion: "—",
-            payment: "Unpaid",
-            method: "Bitcoin (BTC)",
-            status: "Failed",
-            date: "Sep 26, 2026",
-        },
-    ]);
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    // --------------------------------
+    // EDIT STATE
+    // --------------------------------
+
+    const [editingOrder, setEditingOrder] = useState(null);
+    const [savingOrder, setSavingOrder] = useState(false);
+    const [deletingOrderId, setDeletingOrderId] = useState(null);
+
+    // --------------------------------
+    // GET ORDERS
+    // --------------------------------
+
+    useEffect(() => {
+        fetchOrders();
+    }, []);
+
+    const fetchOrders = async () => {
+        try {
+            setLoading(true);
+            setError("");
+
+            const response = await fetch(
+                `${API_BASE_URL}/orders/`,
+                {
+                    method: "GET",
+                    credentials: "include",
+                }
+            );
+
+            const contentType =
+                response.headers.get("content-type");
+
+            if (!contentType?.includes("application/json")) {
+                throw new Error(
+                    "Server returned an invalid response."
+                );
+            }
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail || "Failed to load orders."
+                );
+            }
+
+            setOrders(data);
+        } catch (error) {
+            console.error("Failed to load orders:", error);
+
+            setError(
+                error.message || "Failed to load orders."
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // --------------------------------
     // FILTER STATE
@@ -147,7 +128,81 @@ const Order = () => {
         "Cash App",
         "Venmo",
         "American Express",
+        "Credit / Debit Card",
     ];
+
+    // --------------------------------
+    // FORMAT API ORDERS FOR UI
+    // --------------------------------
+
+    const formattedOrders = useMemo(() => {
+        return orders.map((order) => {
+            const status = order.status
+                ? order.status.charAt(0).toUpperCase() +
+                order.status.slice(1).toLowerCase()
+                : "Pending";
+
+            return {
+                ...order,
+
+                customer: order.customer_name || "—",
+
+                email: order.customer_email || "—",
+
+                total:
+                    order.total !== null &&
+                        order.total !== undefined
+                        ? `$${Number(order.total).toFixed(2)}`
+                        : "$0.00",
+
+                method:
+                    order.payment_method || "Unknown",
+
+                status,
+
+                payment:
+                    order.payment
+                        ? order.payment.charAt(0).toUpperCase() +
+                        order.payment.slice(1).toLowerCase()
+                        : "Unpaid",
+
+                date: order.date
+                    ? new Date(order.date).toLocaleDateString(
+                        "en-US",
+                        {
+                            month: "short",
+                            day: "2-digit",
+                            year: "numeric",
+                        }
+                    )
+                    : "—",
+            };
+        });
+    }, [orders]);
+
+    // --------------------------------
+    // REAL STATISTICS
+    // --------------------------------
+
+    const totalOrders = orders.length;
+
+    const totalPayments = orders.filter(
+        (order) =>
+            String(order.payment || "").toLowerCase() ===
+            "paid"
+    ).length;
+
+    const totalProducts = orders.reduce(
+        (total, order) =>
+            total + Number(order.items || 0),
+        0
+    );
+
+    const failedOrders = orders.filter(
+        (order) =>
+            String(order.status || "").toLowerCase() ===
+            "failed"
+    ).length;
 
     // --------------------------------
     // APPLY FILTERS
@@ -185,13 +240,14 @@ const Order = () => {
     // --------------------------------
 
     const filteredOrders = useMemo(() => {
-        return orders.filter((order) => {
-            const searchValue = search.toLowerCase();
+        const searchValue = search.toLowerCase().trim();
 
+        return formattedOrders.filter((order) => {
             const matchesSearch =
-                order.customer.toLowerCase().includes(searchValue) ||
-                order.email.toLowerCase().includes(searchValue) ||
-                String(order.id).includes(searchValue);
+                !searchValue ||
+                String(order.customer || "")
+                    .toLowerCase()
+                    .includes(searchValue);
 
             const matchesOrderStatus =
                 !orderStatus ||
@@ -213,13 +269,12 @@ const Order = () => {
             );
         });
     }, [
-        orders,
+        formattedOrders,
         search,
         orderStatus,
         paymentStatus,
         paymentMethod,
     ]);
-
     // --------------------------------
     // STATUS STYLES
     // --------------------------------
@@ -258,6 +313,165 @@ const Order = () => {
             : "bg-amber-50 text-amber-600 border-amber-100";
     };
 
+    // --------------------------------
+    // EDIT ORDER
+    // --------------------------------
+
+    const openEditModal = (order) => {
+        setEditingOrder({
+            id: order.id,
+            order_number: order.order_number || "",
+            customer_name: order.customer_name || "",
+            customer_email: order.customer_email || "",
+            items: order.items || 0,
+            total: order.total || 0,
+            payment: order.payment || "Unpaid",
+            payment_method: order.payment_method || "",
+            status: order.status || "pending",
+        });
+    };
+
+    const closeEditModal = () => {
+        if (!savingOrder) {
+            setEditingOrder(null);
+        }
+    };
+
+    const handleEditChange = (field, value) => {
+        setEditingOrder((previous) => ({
+            ...previous,
+            [field]: value,
+        }));
+    };
+
+    const handleSaveOrder = async () => {
+        if (!editingOrder) {
+            return;
+        }
+
+        try {
+            setSavingOrder(true);
+
+            const response = await fetch(
+                `${API_BASE_URL}/orders/${editingOrder.id}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        order_number:
+                            editingOrder.order_number.trim(),
+
+                        customer_name:
+                            editingOrder.customer_name.trim(),
+
+                        customer_email:
+                            editingOrder.customer_email.trim(),
+
+                        items: Number(editingOrder.items),
+
+                        total: Number(editingOrder.total),
+
+                        payment:
+                            editingOrder.payment,
+
+                        payment_method:
+                            editingOrder.payment_method,
+
+                        status:
+                            editingOrder.status,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail || "Failed to update order."
+                );
+            }
+
+            setOrders((previousOrders) =>
+                previousOrders.map((order) =>
+                    order.id === data.id
+                        ? data
+                        : order
+                )
+            );
+
+            setEditingOrder(null);
+
+        } catch (error) {
+            console.error(
+                "Failed to update order:",
+                error
+            );
+
+            alert(
+                error.message ||
+                "Failed to update order."
+            );
+        } finally {
+            setSavingOrder(false);
+        }
+    };
+
+    // --------------------------------
+    // DELETE ORDER
+    // --------------------------------
+
+    const handleDeleteOrder = async (orderId) => {
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this order?"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setDeletingOrderId(orderId);
+
+            const response = await fetch(
+                `${API_BASE_URL}/orders/${orderId}`,
+                {
+                    method: "DELETE",
+                    credentials: "include",
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail || "Failed to delete order."
+                );
+            }
+
+            setOrders((previousOrders) =>
+                previousOrders.filter(
+                    (order) => order.id !== orderId
+                )
+            );
+
+        } catch (error) {
+            console.error(
+                "Failed to delete order:",
+                error
+            );
+
+            alert(
+                error.message ||
+                "Failed to delete order."
+            );
+        } finally {
+            setDeletingOrderId(null);
+        }
+    };
+
     return (
         <div className="w-full space-y-6">
 
@@ -274,7 +488,7 @@ const Order = () => {
                     iconColor="text-blue-600"
                     iconBg="bg-blue-50"
                     iconBorder="border-blue-100"
-                    value="8"
+                    value={loading ? "..." : String(totalOrders)}
                     title="Total Orders"
                     subtitle="Orders received"
                 />
@@ -286,7 +500,7 @@ const Order = () => {
                     iconColor="text-emerald-600"
                     iconBg="bg-emerald-50"
                     iconBorder="border-emerald-100"
-                    value="12"
+                    value={loading ? "..." : String(totalPayments)}
                     title="Payments"
                     subtitle="Payments received"
                 />
@@ -298,9 +512,9 @@ const Order = () => {
                     iconColor="text-purple-600"
                     iconBg="bg-purple-50"
                     iconBorder="border-purple-100"
-                    value="24"
+                    value={loading ? "..." : String(totalProducts)}
                     title="Products"
-                    subtitle="Products in inventory"
+                    subtitle="Products ordered"
                 />
 
                 <StatCard
@@ -310,7 +524,7 @@ const Order = () => {
                     iconColor="text-red-600"
                     iconBg="bg-red-50"
                     iconBorder="border-red-100"
-                    value="3"
+                    value={loading ? "..." : String(failedOrders)}
                     title="Failed Orders"
                     subtitle="Requires attention"
                 />
@@ -323,15 +537,13 @@ const Order = () => {
 
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
-                {/* --------------------------------
-                    HEADER / SEARCH / FILTERS
-                -------------------------------- */}
+                {/* HEADER */}
 
                 <div className="border-b border-slate-200 p-5">
 
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 
-                        {/* Search */}
+                        {/* SEARCH */}
 
                         <div className="relative w-full xl:max-w-sm">
 
@@ -352,11 +564,9 @@ const Order = () => {
 
                         </div>
 
-                        {/* Filters */}
+                        {/* FILTERS */}
 
                         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-
-                            {/* Order Status */}
 
                             <select
                                 value={orderStatus}
@@ -379,8 +589,6 @@ const Order = () => {
                                 ))}
                             </select>
 
-                            {/* Payment */}
-
                             <select
                                 value={paymentStatus}
                                 onChange={(e) =>
@@ -401,8 +609,6 @@ const Order = () => {
                                     </option>
                                 ))}
                             </select>
-
-                            {/* Payment Method */}
 
                             <select
                                 value={paymentMethod}
@@ -425,8 +631,6 @@ const Order = () => {
                                 ))}
                             </select>
 
-                            {/* Filter Button */}
-
                             <button
                                 type="button"
                                 onClick={handleFilter}
@@ -439,10 +643,6 @@ const Order = () => {
                         </div>
 
                     </div>
-
-                    {/* --------------------------------
-                        ACTIVE FILTERS
-                    -------------------------------- */}
 
                     {activeFilters.length > 0 && (
                         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -465,13 +665,11 @@ const Order = () => {
 
                 </div>
 
-                {/* --------------------------------
-                    TABLE
-                -------------------------------- */}
+                {/* TABLE */}
 
                 <div className="overflow-x-auto">
 
-                    <table className="w-full min-w-[1200px] border-collapse">
+                    <table className="w-full min-w-[1250px] border-collapse">
 
                         <thead>
 
@@ -498,10 +696,6 @@ const Order = () => {
                                 </th>
 
                                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    Promotion
-                                </th>
-
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                     Payment
                                 </th>
 
@@ -514,7 +708,7 @@ const Order = () => {
                                 </th>
 
                                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    Send Email
+                                    Actions
                                 </th>
 
                             </tr>
@@ -523,17 +717,49 @@ const Order = () => {
 
                         <tbody>
 
-                            {filteredOrders.length === 0 ? (
+                            {loading ? (
 
                                 <tr>
-
                                     <td
-                                        colSpan="10"
+                                        colSpan="9"
+                                        className="px-6 py-16 text-center text-sm text-slate-500"
+                                    >
+                                        Loading orders...
+                                    </td>
+                                </tr>
+
+                            ) : error ? (
+
+                                <tr>
+                                    <td
+                                        colSpan="9"
+                                        className="px-6 py-16 text-center"
+                                    >
+
+                                        <div className="text-sm font-medium text-red-500">
+                                            {error}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={fetchOrders}
+                                            className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                                        >
+                                            Try Again
+                                        </button>
+
+                                    </td>
+                                </tr>
+
+                            ) : filteredOrders.length === 0 ? (
+
+                                <tr>
+                                    <td
+                                        colSpan="9"
                                         className="px-6 py-16 text-center text-sm text-slate-500"
                                     >
                                         No orders found
                                     </td>
-
                                 </tr>
 
                             ) : (
@@ -563,10 +789,6 @@ const Order = () => {
 
                                         <td className="px-6 py-4 text-sm font-semibold text-slate-700">
                                             {order.total}
-                                        </td>
-
-                                        <td className="px-6 py-4 text-sm text-slate-500">
-                                            {order.promotion}
                                         </td>
 
                                         <td className="px-6 py-4">
@@ -599,13 +821,45 @@ const Order = () => {
 
                                         <td className="px-6 py-4">
 
-                                            <button
-                                                type="button"
-                                                className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
-                                            >
-                                                <Mail size={15} />
-                                                Send
-                                            </button>
+                                            <div className="flex items-center gap-2">
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        openEditModal(order)
+                                                    }
+                                                    title="Edit Order"
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                                                >
+                                                    <Pencil size={15} />
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleDeleteOrder(
+                                                            order.id
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        deletingOrderId ===
+                                                        order.id
+                                                    }
+                                                    title="Delete Order"
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-red-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <Trash2 size={15} />
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    title="Send Email"
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                                                >
+                                                    <Mail size={15} />
+                                                </button>
+
+                                            </div>
 
                                         </td>
 
@@ -622,6 +876,312 @@ const Order = () => {
                 </div>
 
             </div>
+
+            {/* --------------------------------
+                EDIT ORDER MODAL
+            -------------------------------- */}
+
+            {editingOrder && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+
+                    <div className="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-xl">
+
+                        {/* MODAL HEADER */}
+
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-800">
+                                    Edit Order
+                                </h2>
+
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Order #{editingOrder.id}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={closeEditModal}
+                                disabled={savingOrder}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                            >
+                                <X size={18} />
+                            </button>
+
+                        </div>
+
+                        {/* MODAL BODY */}
+
+                        <div className="max-h-[70vh] overflow-y-auto p-6">
+
+                            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+
+                                {/* Order Number */}
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Order Number
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        value={
+                                            editingOrder.order_number
+                                        }
+                                        onChange={(e) =>
+                                            handleEditChange(
+                                                "order_number",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    />
+                                </div>
+
+                                {/* Customer Name */}
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Customer Name
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        value={
+                                            editingOrder.customer_name
+                                        }
+                                        onChange={(e) =>
+                                            handleEditChange(
+                                                "customer_name",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    />
+                                </div>
+
+                                {/* Email */}
+
+                                <div className="sm:col-span-2">
+
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Customer Email
+                                    </label>
+
+                                    <input
+                                        type="email"
+                                        value={
+                                            editingOrder.customer_email
+                                        }
+                                        onChange={(e) =>
+                                            handleEditChange(
+                                                "customer_email",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    />
+
+                                </div>
+
+                                {/* Items */}
+
+                                <div>
+
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Items
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={
+                                            editingOrder.items
+                                        }
+                                        onChange={(e) =>
+                                            handleEditChange(
+                                                "items",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    />
+
+                                </div>
+
+                                {/* Total */}
+
+                                <div>
+
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Total
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={
+                                            editingOrder.total
+                                        }
+                                        onChange={(e) =>
+                                            handleEditChange(
+                                                "total",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    />
+
+                                </div>
+
+                                {/* Payment */}
+
+                                <div>
+
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Payment
+                                    </label>
+
+                                    <select
+                                        value={
+                                            editingOrder.payment
+                                        }
+                                        onChange={(e) =>
+                                            handleEditChange(
+                                                "payment",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        {paymentStatuses.map(
+                                            (payment) => (
+                                                <option
+                                                    key={payment}
+                                                    value={payment}
+                                                >
+                                                    {payment}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
+
+                                </div>
+
+                                {/* Payment Method */}
+
+                                <div>
+
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Payment Method
+                                    </label>
+
+                                    <select
+                                        value={
+                                            editingOrder.payment_method
+                                        }
+                                        onChange={(e) =>
+                                            handleEditChange(
+                                                "payment_method",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    >
+
+                                        <option value="">
+                                            Select Method
+                                        </option>
+
+                                        {paymentMethods.map(
+                                            (method) => (
+                                                <option
+                                                    key={method}
+                                                    value={method}
+                                                >
+                                                    {method}
+                                                </option>
+                                            )
+                                        )}
+
+                                    </select>
+
+                                </div>
+
+                                {/* Status */}
+
+                                <div className="sm:col-span-2">
+
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Order Status
+                                    </label>
+
+                                    <select
+                                        value={
+                                            editingOrder.status
+                                        }
+                                        onChange={(e) =>
+                                            handleEditChange(
+                                                "status",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    >
+
+                                        {orderStatuses.map(
+                                            (status) => (
+                                                <option
+                                                    key={status}
+                                                    value={status.toLowerCase()}
+                                                >
+                                                    {status}
+                                                </option>
+                                            )
+                                        )}
+
+                                    </select>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        {/* MODAL FOOTER */}
+
+                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+
+                            <button
+                                type="button"
+                                onClick={closeEditModal}
+                                disabled={savingOrder}
+                                className="h-10 rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveOrder}
+                                disabled={savingOrder}
+                                className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <Save size={16} />
+
+                                {savingOrder
+                                    ? "Saving..."
+                                    : "Save Changes"}
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+            )}
 
         </div>
     );
