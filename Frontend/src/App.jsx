@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Navigate,
   Route,
@@ -28,10 +28,93 @@ import Signin from "./page/Signin.jsx";
 import Login from "./page/Login.jsx";
 import NotFound from "./page/NotFound.jsx";
 import Checkout from "./page/Checkout.jsx";
+import { useCart } from "./context/CartContext.jsx";
 
 // Admin
 import AdminLogin from "./page/Admin_Login.jsx";
 import Admin from "./page/Admin.jsx";
+
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "";
+
+
+/* =========================
+   PROTECTED CHECKOUT
+========================= */
+
+const ProtectedCheckout = () => {
+  const { cartItems } = useCart();
+
+  if (!cartItems || cartItems.length === 0) {
+    return <Navigate to="/catalog" replace />;
+  }
+
+  return <Checkout />;
+};
+
+
+/* =========================
+   PROTECTED ADMIN
+========================= */
+
+const ProtectedAdmin = () => {
+  const [checking, setChecking] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const checkAdminAuthentication = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/admin/status`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
+        if (response.ok) {
+          setAuthenticated(true);
+        } else {
+          setAuthenticated(false);
+        }
+      } catch (error) {
+        console.error(
+          "Admin authentication check error:",
+          error
+        );
+
+        setAuthenticated(false);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    checkAdminAuthentication();
+  }, []);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-white">
+        <div className="text-sm text-gray-500">
+          Checking access...
+        </div>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <Navigate
+        to="/pannel/login"
+        replace
+      />
+    );
+  }
+
+  return <Admin />;
+};
+
 
 const App = () => {
   return (
@@ -39,30 +122,48 @@ const App = () => {
       <ScrollToTop />
 
       <Routes>
+
         {/* =========================
-            ADMIN ROUTES
+            ADMIN LOGIN
             No Header / Footer
         ========================= */}
+
         <Route
           path="/pannel/login"
           element={<AdminLogin />}
         />
 
+
+        {/* =========================
+            PROTECTED ADMIN ROUTES
+            No Header / Footer
+        ========================= */}
+
         <Route
           path="/admin/*"
-          element={
-            <Admin />
-          }
+          element={<ProtectedAdmin />}
         />
+
+
+        {/* =========================
+            ADMIN ROOT
+        ========================= */}
 
         <Route
           path="/admin"
-          element={<Navigate to="/admin/orders" replace />}
+          element={
+            <Navigate
+              to="/admin/orders"
+              replace
+            />
+          }
         />
+
 
         {/* =========================
             WEBSITE ROUTES
         ========================= */}
+
         <Route
           path="*"
           element={
@@ -71,7 +172,9 @@ const App = () => {
               <Header />
 
               <Routes>
+
                 {/* Guest-only routes */}
+
                 <Route
                   path="/signup"
                   element={
@@ -90,14 +193,37 @@ const App = () => {
                   }
                 />
 
+
                 {/* Main Routes */}
-                <Route path="/" element={<Main_page />} />
-                <Route path="/catalog" element={<Catalog />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/about" element={<About />} />
-                <Route path='/checkout' element={<Checkout />} />
+
+                <Route
+                  path="/"
+                  element={<Main_page />}
+                />
+
+                <Route
+                  path="/catalog"
+                  element={<Catalog />}
+                />
+
+                <Route
+                  path="/contact"
+                  element={<Contact />}
+                />
+
+                <Route
+                  path="/about"
+                  element={<About />}
+                />
+
+                <Route
+                  path="/checkout"
+                  element={<ProtectedCheckout />}
+                />
+
 
                 {/* Policies */}
+
                 <Route
                   path="/terms"
                   element={<TermCondition />}
@@ -118,7 +244,9 @@ const App = () => {
                   element={<Shipping />}
                 />
 
+
                 {/* Other Pages */}
+
                 <Route
                   path="/quality"
                   element={<Quality />}
@@ -144,20 +272,25 @@ const App = () => {
                   element={<Compliance />}
                 />
 
+
                 {/* Unknown Route */}
+
                 <Route
                   path="*"
                   element={<NotFound />}
                 />
+
               </Routes>
 
               <Footer />
             </>
           }
         />
+
       </Routes>
     </>
   );
 };
+
 
 export default App;
