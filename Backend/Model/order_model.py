@@ -29,6 +29,11 @@ class OrderModel(base):
         String(100),
         nullable=False
     )
+    
+    research_field = Column(
+    String(100),
+    nullable=False
+    )
 
     items = Column(
         Integer,
@@ -48,11 +53,6 @@ class OrderModel(base):
     payment_method = Column(
         String(50),
         nullable=False
-    )
-
-    promotion = Column(
-        String(100),
-        nullable=True
     )
 
     status = Column(

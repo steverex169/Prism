@@ -22,24 +22,26 @@ from Model.product_model import ProductModel
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
-# =========================
-# Upload Directory
-# =========================
-
 UPLOAD_DIR = "uploads/products"
-
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-
-# =========================
-# Response Schema
-# =========================
 
 class ProductResponse(BaseModel):
     id: int
     name: str
     price: int
     image: Optional[str] = None
+
+    # Technical / Scientific Information
+    cas_number: Optional[str] = None
+    chemical_name: Optional[str] = None
+    molecular_formula: Optional[str] = None
+    molecular_weight: Optional[str] = None
+    purity: Optional[str] = None
+    appearance: Optional[str] = None
+    solubility: Optional[str] = None
+    storage_conditions: Optional[str] = None
+
     available: bool
     featured: bool
     sales: int
@@ -51,20 +53,12 @@ class ProductResponse(BaseModel):
         from_attributes = True
 
 
-# =========================
-# Allowed Image Types
-# =========================
-
 ALLOWED_IMAGE_TYPES = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
 }
 
-
-# =========================
-# Save Image
-# =========================
 
 async def save_image(image: UploadFile) -> str:
     if image.content_type not in ALLOWED_IMAGE_TYPES:
@@ -74,13 +68,8 @@ async def save_image(image: UploadFile) -> str:
         )
 
     extension = ALLOWED_IMAGE_TYPES[image.content_type]
-
     filename = f"{uuid.uuid4().hex}{extension}"
-
-    file_path = os.path.join(
-        UPLOAD_DIR,
-        filename
-    )
+    file_path = os.path.join(UPLOAD_DIR, filename)
 
     contents = await image.read()
 
@@ -90,33 +79,24 @@ async def save_image(image: UploadFile) -> str:
     return f"/uploads/products/{filename}"
 
 
-# =========================
-# Delete Image File
-# =========================
-
 def delete_image(image_path: Optional[str]):
     if not image_path:
         return
 
     filename = os.path.basename(image_path)
-
-    file_path = os.path.join(
-        UPLOAD_DIR,
-        filename
-    )
+    file_path = os.path.join(UPLOAD_DIR, filename)
 
     if os.path.exists(file_path):
         os.remove(file_path)
 
 
-# =========================
-# GET ALL PRODUCTS
-# =========================
+# IMPORTANT:
+# Keep /search before /{product_id}
+# so "search" is not treated as a product ID.
+
 
 @router.get("/", response_model=List[ProductResponse])
-def get_products(
-    db: Session = Depends(get_db)
-):
+def get_products(db: Session = Depends(get_db)):
     products = (
         db.query(ProductModel)
         .order_by(ProductModel.id.asc())
@@ -126,9 +106,20 @@ def get_products(
     return products
 
 
-# =========================
-# GET PRODUCT BY ID
-# =========================
+@router.get("/search", response_model=List[ProductResponse])
+def get_product_by_name(
+    name: str = Query(..., min_length=1),
+    db: Session = Depends(get_db)
+):
+    products = (
+        db.query(ProductModel)
+        .filter(ProductModel.name.ilike(f"%{name}%"))
+        .order_by(ProductModel.id.asc())
+        .all()
+    )
+
+    return products
+
 
 @router.get("/{product_id}", response_model=ProductResponse)
 def get_product(
@@ -150,40 +141,28 @@ def get_product(
     return product
 
 
-# =========================
-# GET PRODUCT BY NAME
-# =========================
-
-@router.get("/search", response_model=List[ProductResponse])
-def get_product_by_name(
-    name: str = Query(..., min_length=1),
-    db: Session = Depends(get_db)
-):
-    products = (
-        db.query(ProductModel)
-        .filter(
-            ProductModel.name.ilike(f"%{name}%")
-        )
-        .order_by(ProductModel.id.asc())
-        .all()
-    )
-
-    return products
-
-
-# =========================
-# CREATE PRODUCT
-# =========================
-
 @router.post("/", response_model=ProductResponse, status_code=201)
 async def create_product(
     name: str = Form(...),
     price: int = Form(...),
+
+    # Technical / Scientific Information
+    cas_number: Optional[str] = Form(None),
+    chemical_name: Optional[str] = Form(None),
+    molecular_formula: Optional[str] = Form(None),
+    molecular_weight: Optional[str] = Form(None),
+    purity: Optional[str] = Form(None),
+    appearance: Optional[str] = Form(None),
+    solubility: Optional[str] = Form(None),
+    storage_conditions: Optional[str] = Form(None),
+
     available: bool = Form(True),
     featured: bool = Form(False),
     sales: int = Form(0),
     relevance: int = Form(0),
+
     image: Optional[UploadFile] = File(None),
+
     db: Session = Depends(get_db)
 ):
     existing_product = (
@@ -198,6 +177,12 @@ async def create_product(
             detail="Product with this name already exists"
         )
 
+    if price < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Product price cannot be negative"
+        )
+
     image_path = None
 
     if image:
@@ -207,6 +192,17 @@ async def create_product(
         name=name,
         price=price,
         image=image_path,
+
+        # Technical / Scientific Information
+        cas_number=cas_number,
+        chemical_name=chemical_name,
+        molecular_formula=molecular_formula,
+        molecular_weight=molecular_weight,
+        purity=purity,
+        appearance=appearance,
+        solubility=solubility,
+        storage_conditions=storage_conditions,
+
         available=available,
         featured=featured,
         sales=sales,
@@ -220,20 +216,30 @@ async def create_product(
     return new_product
 
 
-# =========================
-# UPDATE PRODUCT
-# =========================
-
 @router.put("/{product_id}", response_model=ProductResponse)
 async def update_product(
     product_id: int,
+
     name: Optional[str] = Form(None),
     price: Optional[int] = Form(None),
+
+    # Technical / Scientific Information
+    cas_number: Optional[str] = Form(None),
+    chemical_name: Optional[str] = Form(None),
+    molecular_formula: Optional[str] = Form(None),
+    molecular_weight: Optional[str] = Form(None),
+    purity: Optional[str] = Form(None),
+    appearance: Optional[str] = Form(None),
+    solubility: Optional[str] = Form(None),
+    storage_conditions: Optional[str] = Form(None),
+
     available: Optional[bool] = Form(None),
     featured: Optional[bool] = Form(None),
     sales: Optional[int] = Form(None),
     relevance: Optional[int] = Form(None),
+
     image: Optional[UploadFile] = File(None),
+
     db: Session = Depends(get_db)
 ):
     product = (
@@ -275,6 +281,31 @@ async def update_product(
 
         product.price = price
 
+    # Technical / Scientific Information
+    if cas_number is not None:
+        product.cas_number = cas_number
+
+    if chemical_name is not None:
+        product.chemical_name = chemical_name
+
+    if molecular_formula is not None:
+        product.molecular_formula = molecular_formula
+
+    if molecular_weight is not None:
+        product.molecular_weight = molecular_weight
+
+    if purity is not None:
+        product.purity = purity
+
+    if appearance is not None:
+        product.appearance = appearance
+
+    if solubility is not None:
+        product.solubility = solubility
+
+    if storage_conditions is not None:
+        product.storage_conditions = storage_conditions
+
     if available is not None:
         product.available = available
 
@@ -302,10 +333,6 @@ async def update_product(
     return product
 
 
-# =========================
-# DELETE PRODUCT
-# =========================
-
 @router.delete("/{product_id}")
 def delete_product(
     product_id: int,
@@ -323,10 +350,8 @@ def delete_product(
             detail="Product not found"
         )
 
-    # Delete image from server
     delete_image(product.image)
 
-    # Delete database record
     db.delete(product)
     db.commit()
 

@@ -140,21 +140,12 @@ const Checkout = () => {
   ];
 
   const researchFields = [
-    "Biochemistry",
-    "Biotechnology",
-    "Cell Biology",
-    "Chemistry",
-    "Genetics",
-    "Molecular Biology",
-    "Pharmacology",
-    "Physiology",
-    "Biomedical Research",
-    "Medical Research",
-    "Clinical Research",
-    "Neuroscience",
-    "Immunology",
-    "Microbiology",
-    "Other",
+    "Pharmacology / Drug Discovery",
+    "Biochemistry & Molecular Biology",
+    "Academic Research",
+    "Contract Research Organization (CRO)",
+    "Analytical Chemistry Laboratory",
+    "Other Qualified Research (specify)",
   ];
 
   /*
@@ -294,7 +285,7 @@ const Checkout = () => {
         if (!response.ok) {
           throw new Error(
             data.detail ||
-              "Failed to load shipping information."
+            "Failed to load shipping information."
           );
         }
 
@@ -498,7 +489,7 @@ const Checkout = () => {
       if (!response.ok) {
         throw new Error(
           data.detail ||
-            "Failed to save shipping information."
+          "Failed to save shipping information."
         );
       }
 
@@ -627,37 +618,35 @@ const Checkout = () => {
       return;
     }
 
-    if (
-      !shippingInfo.fullName.trim() ||
-      !shippingInfo.email.trim() ||
-      !shippingInfo.phone.trim() ||
-      !shippingInfo.researchField.trim() ||
-      !shippingInfo.streetAddress.trim() ||
-      !shippingInfo.city.trim() ||
-      !shippingInfo.zipCode.trim() ||
-      !shippingInfo.state.trim()
-    ) {
-      alert(
-        "Please complete all required information, including your research field."
-      );
+    const requiredFields = [
+      ["Full Name", shippingInfo.fullName],
+      ["Email", shippingInfo.email],
+      ["Phone", shippingInfo.phone],
+      ["Research Field", shippingInfo.researchField],
+      ["Street Address", shippingInfo.streetAddress],
+      ["City", shippingInfo.city],
+      ["ZIP Code", shippingInfo.zipCode],
+      ["State", shippingInfo.state],
+    ];
 
+    const missingField = requiredFields.find(
+      ([, value]) => !String(value || "").trim()
+    );
+
+    if (missingField) {
+      alert(`Please enter your ${missingField[0]}.`);
       return;
     }
 
-    /*
-     * Start submitting before saving shipping
-     * so the user cannot trigger duplicate saves/orders.
-     */
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingInfo.email.trim())) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      /*
-       * FINAL SHIPPING SAVE
-       *
-       * The order will NOT be created if this fails.
-       */
-      const shippingSaved =
-        await saveShippingInformation();
+      const shippingSaved = await saveShippingInformation();
 
       if (!shippingSaved) {
         throw new Error(
@@ -670,7 +659,7 @@ const Checkout = () => {
           (total, item) =>
             total +
             Number(item.price) *
-              Number(item.quantity),
+            Number(item.quantity),
           0
         );
 
@@ -700,7 +689,7 @@ const Checkout = () => {
         selectedMethod === "card"
           ? "Credit / Debit Card"
           : selectedMethod ===
-              "cashapp"
+            "cashapp"
             ? "Cash App"
             : "Venmo";
 
@@ -781,7 +770,7 @@ const Checkout = () => {
       if (!response.ok) {
         throw new Error(
           data.detail ||
-            "Failed to create order."
+          "Failed to create order."
         );
       }
 
@@ -814,7 +803,7 @@ const Checkout = () => {
 
       alert(
         error.message ||
-          "Unable to create your order."
+        "Unable to create your order."
       );
     } finally {
       setIsSubmitting(false);
@@ -879,11 +868,10 @@ const Checkout = () => {
                       return (
                         <div
                           key={method.id}
-                          className={`rounded-3xl border-2 py-4 first:pt-2 last:pb-4 sm:px-2 transition-colors duration-200 ${
-                            isSelected
-                              ? "border-[#0B5FA5] bg-[#F5F9FF]/70"
-                              : "border-transparent bg-transparent"
-                          }`}
+                          className={`rounded-3xl border-2 py-4 first:pt-2 last:pb-4 sm:px-2 transition-colors duration-200 ${isSelected
+                            ? "border-[#0B5FA5] bg-[#F5F9FF]/70"
+                            : "border-transparent bg-transparent"
+                            }`}
                         >
 
                           <button
@@ -897,11 +885,10 @@ const Checkout = () => {
                           >
 
                             <span
-                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-xl border transition ${
-                                isSelected
-                                  ? "border-[#0B5FA5] bg-[#0B5FA5]"
-                                  : "border-[#CBD5E1] bg-white"
-                              }`}
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-xl border transition ${isSelected
+                                ? "border-[#0B5FA5] bg-[#0B5FA5]"
+                                : "border-[#CBD5E1] bg-white"
+                                }`}
                             >
                               {isSelected && (
                                 <Check
@@ -915,24 +902,24 @@ const Checkout = () => {
 
                               {method.id ===
                                 "card" && (
-                                <span className="flex h-full w-full items-center justify-center rounded-xl bg-[#EEF5FF]">
-                                  <CreditCard className="h-5 w-5 text-[#003087]" />
-                                </span>
-                              )}
+                                  <span className="flex h-full w-full items-center justify-center rounded-xl bg-[#EEF5FF]">
+                                    <CreditCard className="h-5 w-5 text-[#003087]" />
+                                  </span>
+                                )}
 
                               {method.id ===
                                 "cashapp" && (
-                                <span className="flex h-full w-full items-center justify-center rounded-xl bg-[#e6f9ec] text-3xl font-bold italic text-[#00A840]">
-                                  $
-                                </span>
-                              )}
+                                  <span className="flex h-full w-full items-center justify-center rounded-xl bg-[#e6f9ec] text-3xl font-bold italic text-[#00A840]">
+                                    $
+                                  </span>
+                                )}
 
                               {method.id ===
                                 "venmo" && (
-                                <span className="flex h-full w-full items-center justify-center rounded-xl bg-[#008CFF] text-3xl font-bold italic text-white">
-                                  v
-                                </span>
-                              )}
+                                  <span className="flex h-full w-full items-center justify-center rounded-xl bg-[#008CFF] text-3xl font-bold italic text-white">
+                                    v
+                                  </span>
+                                )}
 
                             </div>
 
@@ -942,7 +929,7 @@ const Checkout = () => {
                               </h3>
 
                               {method.id ===
-                              "card" ? (
+                                "card" ? (
                                 <p className="mt-0.5 text-[10px] leading-relaxed text-[#64748B] sm:text-xs">
                                   No PayPal account needed. Secure card checkout by
                                   PayPal, confirmed instantly.
@@ -958,42 +945,42 @@ const Checkout = () => {
 
                           {method.id ===
                             "card" && (
-                            <div className="ml-8 mt-3 flex items-center gap-2">
+                              <div className="ml-8 mt-3 flex items-center gap-2">
 
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2">
-                                <img
-                                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNI8bbuu8MmiO60cZ4MiZlUTA6aRvmjIgdTd3GYLcs9UW49ntldimLSbs&s=10"
-                                  alt="Visa"
-                                  className="h-6 w-auto max-w-full object-contain"
-                                />
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2">
+                                  <img
+                                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNI8bbuu8MmiO60cZ4MiZlUTA6aRvmjIgdTd3GYLcs9UW49ntldimLSbs&s=10"
+                                    alt="Visa"
+                                    className="h-6 w-auto max-w-full object-contain"
+                                  />
+                                </div>
+
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2">
+                                  <img
+                                    src="https://download.logo.wine/logo/Mastercard/Mastercard-Logo.wine.png"
+                                    alt="Mastercard"
+                                    className="h-6 w-auto max-w-full object-contain"
+                                  />
+                                </div>
+
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2">
+                                  <img
+                                    src="https://logowik.com/content/uploads/images/amex-card1708.jpg"
+                                    alt="American Express"
+                                    className="h-7 w-auto max-w-full object-contain"
+                                  />
+                                </div>
+
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2">
+                                  <img
+                                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSweeRUqMFtxBXnsR8Lp0W4XiL2ADJADCU75sPDB2qRug&s=10"
+                                    alt="Discover"
+                                    className="h-7 w-auto max-w-full object-contain"
+                                  />
+                                </div>
+
                               </div>
-
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2">
-                                <img
-                                  src="https://download.logo.wine/logo/Mastercard/Mastercard-Logo.wine.png"
-                                  alt="Mastercard"
-                                  className="h-6 w-auto max-w-full object-contain"
-                                />
-                              </div>
-
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2">
-                                <img
-                                  src="https://logowik.com/content/uploads/images/amex-card1708.jpg"
-                                  alt="American Express"
-                                  className="h-7 w-auto max-w-full object-contain"
-                                />
-                              </div>
-
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2">
-                                <img
-                                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSweeRUqMFtxBXnsR8Lp0W4XiL2ADJADCU75sPDB2qRug&s=10"
-                                  alt="Discover"
-                                  className="h-7 w-auto max-w-full object-contain"
-                                />
-                              </div>
-
-                            </div>
-                          )}
+                            )}
 
                         </div>
                       );
@@ -1101,6 +1088,7 @@ const Checkout = () => {
                     onBlur={
                       handleShippingBlur
                     }
+                    required
                     placeholder="Enter your full name"
                     className="h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm text-[#1E293B] outline-none transition placeholder:text-[#94A3B8] focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE]"
                   />
@@ -1133,6 +1121,7 @@ const Checkout = () => {
                       onBlur={
                         handleEmailBlur
                       }
+                      required
                       placeholder="Enter your email"
                       className="h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm text-[#1E293B] outline-none transition placeholder:text-[#94A3B8] focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE]"
                     />
@@ -1162,6 +1151,7 @@ const Checkout = () => {
                       onBlur={
                         handleShippingBlur
                       }
+                      required
                       placeholder="Enter your phone number"
                       className="h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm text-[#1E293B] outline-none transition placeholder:text-[#94A3B8] focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE]"
                     />
@@ -1175,7 +1165,7 @@ const Checkout = () => {
                     htmlFor="researchField"
                     className="mb-2 block text-sm font-medium text-[#1E293B]"
                   >
-                    Research Field{" "}
+                    Field of Qualified Research (required for account set up and purchase){" "}
                     <span className="text-[#EF4444]">
                       *
                     </span>
@@ -1194,11 +1184,10 @@ const Checkout = () => {
                       handleShippingBlur
                     }
                     required
-                    className={`h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm outline-none transition focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE] ${
-                      shippingInfo.researchField
-                        ? "text-[#1E293B]"
-                        : "text-[#94A3B8]"
-                    }`}
+                    className={`h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm outline-none transition focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE] ${shippingInfo.researchField
+                      ? "text-[#1E293B]"
+                      : "text-[#94A3B8]"
+                      }`}
                   >
                     <option
                       value=""
@@ -1249,6 +1238,7 @@ const Checkout = () => {
                     onBlur={
                       handleShippingBlur
                     }
+                    required
                     placeholder="Enter your street address"
                     className="h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm text-[#1E293B] outline-none transition placeholder:text-[#94A3B8] focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE]"
                   />
@@ -1282,6 +1272,7 @@ const Checkout = () => {
                       onBlur={
                         handleShippingBlur
                       }
+                      required
                       placeholder="City"
                       className="h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm text-[#1E293B] outline-none transition placeholder:text-[#94A3B8] focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE]"
                     />
@@ -1313,6 +1304,7 @@ const Checkout = () => {
                       onBlur={
                         handleShippingBlur
                       }
+                      required
                       placeholder="ZIP code"
                       className="h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm text-[#1E293B] outline-none transition placeholder:text-[#94A3B8] focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE]"
                     />
@@ -1343,11 +1335,10 @@ const Checkout = () => {
                         handleShippingBlur
                       }
                       required
-                      className={`h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm outline-none transition focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE] ${
-                        shippingInfo.state
-                          ? "text-[#1E293B]"
-                          : "text-[#94A3B8]"
-                      }`}
+                      className={`h-12 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm outline-none transition focus:border-[#94A3B8] focus:ring-2 focus:ring-[#DBEAFE] ${shippingInfo.state
+                        ? "text-[#1E293B]"
+                        : "text-[#94A3B8]"
+                        }`}
                     >
                       <option
                         value=""
@@ -1405,32 +1396,30 @@ const Checkout = () => {
                       "standard"
                     )
                   }
-                  className={`w-full rounded-xl border p-4 text-left transition ${
-                    selectedShipping ===
+                  className={`w-full rounded-xl border p-4 text-left transition ${selectedShipping ===
                     "standard"
-                      ? "border-[#0B5FA5] bg-[#F5F9FF]"
-                      : "border-[#E2E8F0] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]"
-                  }`}
+                    ? "border-[#0B5FA5] bg-[#F5F9FF]"
+                    : "border-[#E2E8F0] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]"
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-4">
 
                     <div className="flex items-center gap-3">
 
                       <span
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                          selectedShipping ===
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selectedShipping ===
                           "standard"
-                            ? "border-[#0B5FA5] bg-[#0B5FA5]"
-                            : "border-[#CBD5E1] bg-white"
-                        }`}
+                          ? "border-[#0B5FA5] bg-[#0B5FA5]"
+                          : "border-[#CBD5E1] bg-white"
+                          }`}
                       >
                         {selectedShipping ===
                           "standard" && (
-                          <Check
-                            className="h-3 w-3 text-white"
-                            strokeWidth={3}
-                          />
-                        )}
+                            <Check
+                              className="h-3 w-3 text-white"
+                              strokeWidth={3}
+                            />
+                          )}
                       </span>
 
                       <div>
@@ -1460,32 +1449,30 @@ const Checkout = () => {
                       "overnight"
                     )
                   }
-                  className={`w-full rounded-xl border p-4 text-left transition ${
-                    selectedShipping ===
+                  className={`w-full rounded-xl border p-4 text-left transition ${selectedShipping ===
                     "overnight"
-                      ? "border-[#0B5FA5] bg-[#F5F9FF]"
-                      : "border-[#E2E8F0] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]"
-                  }`}
+                    ? "border-[#0B5FA5] bg-[#F5F9FF]"
+                    : "border-[#E2E8F0] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]"
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-4">
 
                     <div className="flex items-center gap-3">
 
                       <span
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                          selectedShipping ===
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selectedShipping ===
                           "overnight"
-                            ? "border-[#0B5FA5] bg-[#0B5FA5]"
-                            : "border-[#CBD5E1] bg-white"
-                        }`}
+                          ? "border-[#0B5FA5] bg-[#0B5FA5]"
+                          : "border-[#CBD5E1] bg-white"
+                          }`}
                       >
                         {selectedShipping ===
                           "overnight" && (
-                          <Check
-                            className="h-3 w-3 text-white"
-                            strokeWidth={3}
-                          />
-                        )}
+                            <Check
+                              className="h-3 w-3 text-white"
+                              strokeWidth={3}
+                            />
+                          )}
                       </span>
 
                       <div>
@@ -1539,11 +1526,10 @@ const Checkout = () => {
                 <div className="flex shrink-0 items-center gap-2">
 
                   <span
-                    className={`text-xs font-bold uppercase tracking-wide ${
-                      accountEnabled
-                        ? "text-[#0066FF]"
-                        : "text-[#94A3B8]"
-                    }`}
+                    className={`text-xs font-bold uppercase tracking-wide ${accountEnabled
+                      ? "text-[#0066FF]"
+                      : "text-[#94A3B8]"
+                      }`}
                   >
                     {accountEnabled
                       ? "ON"
@@ -1563,18 +1549,16 @@ const Checkout = () => {
                           !prev
                       )
                     }
-                    className={`relative flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition-colors duration-200 hover:cursor-pointer ${
-                      accountEnabled
-                        ? "bg-[#0066FF]"
-                        : "bg-[#CBD5E1]"
-                    }`}
+                    className={`relative flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition-colors duration-200 hover:cursor-pointer ${accountEnabled
+                      ? "bg-[#0066FF]"
+                      : "bg-[#CBD5E1]"
+                      }`}
                   >
                     <span
-                      className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                        accountEnabled
-                          ? "translate-x-5"
-                          : "translate-x-0"
-                      }`}
+                      className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${accountEnabled
+                        ? "translate-x-5"
+                        : "translate-x-0"
+                        }`}
                     />
                   </button>
 
@@ -1583,19 +1567,17 @@ const Checkout = () => {
               </div>
 
               <div
-                className={`mt-5 flex items-start gap-3 rounded-xl border p-4 transition-colors duration-200 ${
-                  accountEnabled
-                    ? "border-[#BFDBFE] bg-[#EFF6FF]"
-                    : "border-[#BFDBFE] bg-transparent"
-                }`}
+                className={`mt-5 flex items-start gap-3 rounded-xl border p-4 transition-colors duration-200 ${accountEnabled
+                  ? "border-[#BFDBFE] bg-[#EFF6FF]"
+                  : "border-[#BFDBFE] bg-transparent"
+                  }`}
               >
 
                 <div
-                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                    accountEnabled
-                      ? "bg-[#DBEAFE]"
-                      : "bg-transparent"
-                  }`}
+                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${accountEnabled
+                    ? "bg-[#DBEAFE]"
+                    : "bg-transparent"
+                    }`}
                 >
                   <KeyRound
                     className="h-4 w-4 text-[#0066FF]"
@@ -1642,7 +1624,7 @@ const Checkout = () => {
                 <div className="rounded-full bg-[#EFF6FF] px-3 py-1 text-xs font-semibold text-[#0D59F2]">
                   {checkoutItems.length}{" "}
                   {checkoutItems.length ===
-                  1
+                    1
                     ? "Item"
                     : "Items"}
                 </div>
@@ -1653,7 +1635,7 @@ const Checkout = () => {
               <div className="mt-6 space-y-4">
 
                 {checkoutItems.length >
-                0 ? (
+                  0 ? (
                   checkoutItems.map(
                     (item) => (
                       <div
@@ -1727,142 +1709,204 @@ const Checkout = () => {
 
               {checkoutItems.length >
                 0 && (
-                <>
-                  {/* PROMO CODE */}
-                  <div className="mt-6 border-t border-[#E5E7EB] pt-5">
+                  <>
+                    {/* PROMO CODE */}
+                    <div className="mt-6 border-t border-[#E5E7EB] pt-5">
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowPromo(
-                          (prev) =>
-                            !prev
-                        )
-                      }
-                      className="flex w-full items-center justify-between text-sm font-semibold text-[#0D59F2] transition-colors hover:text-[#0848C7]"
-                    >
-                      <span>
-                        Have a promo code?
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPromo(
+                            (prev) =>
+                              !prev
+                          )
+                        }
+                        className="flex w-full items-center justify-between text-sm font-semibold text-[#0D59F2] transition-colors hover:text-[#0848C7]"
+                      >
+                        <span>
+                          Have a promo code?
+                        </span>
 
-                      <span className="text-lg leading-none">
-                        {showPromo
-                          ? "−"
-                          : "+"}
-                      </span>
-                    </button>
+                        <span className="text-lg leading-none">
+                          {showPromo
+                            ? "−"
+                            : "+"}
+                        </span>
+                      </button>
 
-                    {showPromo && (
-                      <div className="mt-3">
+                      {showPromo && (
+                        <div className="mt-3">
 
-                        <div className="flex gap-2">
+                          <div className="flex gap-2">
 
-                          <input
-                            type="text"
-                            value={
-                              promoCode
-                            }
-                            onChange={(
-                              e
-                            ) =>
-                              setPromoCode(
-                                e.target
-                                  .value
-                              )
-                            }
-                            placeholder="Enter promo code"
-                            className="h-10 min-w-0 flex-1 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#1E293B] outline-none placeholder:text-[#94A3B8] focus:border-[#0D59F2] focus:ring-2 focus:ring-[#DBEAFE]"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (
-                                promoCode.trim()
-                              ) {
-                                setPromoApplied(
-                                  true
-                                );
+                            <input
+                              type="text"
+                              value={
+                                promoCode
                               }
-                            }}
-                            className="h-10 rounded-lg bg-[#0D59F2] px-4 text-xs font-semibold text-white transition hover:bg-[#0848C7]"
-                          >
-                            Apply
-                          </button>
-
-                        </div>
-
-                        {promoApplied && (
-                          <div className="mt-2 flex items-center justify-between">
-
-                            <p className="text-xs font-medium text-[#16A34A]">
-                              Promo code applied
-                            </p>
+                              onChange={(
+                                e
+                              ) =>
+                                setPromoCode(
+                                  e.target
+                                    .value
+                                )
+                              }
+                              placeholder="Enter promo code"
+                              className="h-10 min-w-0 flex-1 rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs text-[#1E293B] outline-none placeholder:text-[#94A3B8] focus:border-[#0D59F2] focus:ring-2 focus:ring-[#DBEAFE]"
+                            />
 
                             <button
                               type="button"
                               onClick={() => {
-                                setPromoCode(
-                                  ""
-                                );
-
-                                setPromoApplied(
-                                  false
-                                );
+                                if (
+                                  promoCode.trim()
+                                ) {
+                                  setPromoApplied(
+                                    true
+                                  );
+                                }
                               }}
-                              className="text-xs font-medium text-[#64748B] hover:text-[#1E293B]"
+                              className="h-10 rounded-lg bg-[#0D59F2] px-4 text-xs font-semibold text-white transition hover:bg-[#0848C7]"
                             >
-                              Remove
+                              Apply
                             </button>
 
                           </div>
-                        )}
 
-                      </div>
-                    )}
+                          {promoApplied && (
+                            <div className="mt-2 flex items-center justify-between">
 
-                  </div>
+                              <p className="text-xs font-medium text-[#16A34A]">
+                                Promo code applied
+                              </p>
 
-                  {/* FINANCIAL BREAKDOWN */}
-                  <div className="mt-5 space-y-3">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPromoCode(
+                                    ""
+                                  );
 
-                    <div className="flex items-center justify-between">
+                                  setPromoApplied(
+                                    false
+                                  );
+                                }}
+                                className="text-xs font-medium text-[#64748B] hover:text-[#1E293B]"
+                              >
+                                Remove
+                              </button>
 
-                      <span className="text-sm text-[#64748B]">
-                        Subtotal
-                      </span>
+                            </div>
+                          )}
 
-                      <span className="text-sm font-medium text-[#1E293B]">
-                        $
-                        {checkoutItems
-                          .reduce(
-                            (
-                              total,
-                              item
-                            ) =>
-                              total +
-                              Number(
-                                item.price
-                              ) *
-                                Number(
-                                  item.quantity
-                                ),
-                            0
-                          )
-                          .toFixed(2)}
-                      </span>
+                        </div>
+                      )}
 
                     </div>
 
-                    {promoApplied && (
+                    {/* FINANCIAL BREAKDOWN */}
+                    <div className="mt-5 space-y-3">
+
                       <div className="flex items-center justify-between">
 
                         <span className="text-sm text-[#64748B]">
-                          Promo Discount
+                          Subtotal
                         </span>
 
-                        <span className="text-sm font-medium text-[#16A34A]">
-                          -$
+                        <span className="text-sm font-medium text-[#1E293B]">
+                          $
+                          {checkoutItems
+                            .reduce(
+                              (
+                                total,
+                                item
+                              ) =>
+                                total +
+                                Number(
+                                  item.price
+                                ) *
+                                Number(
+                                  item.quantity
+                                ),
+                              0
+                            )
+                            .toFixed(2)}
+                        </span>
+
+                      </div>
+
+                      {promoApplied && (
+                        <div className="flex items-center justify-between">
+
+                          <span className="text-sm text-[#64748B]">
+                            Promo Discount
+                          </span>
+
+                          <span className="text-sm font-medium text-[#16A34A]">
+                            -$
+                            {(
+                              checkoutItems.reduce(
+                                (
+                                  total,
+                                  item
+                                ) =>
+                                  total +
+                                  Number(
+                                    item.price
+                                  ) *
+                                  Number(
+                                    item.quantity
+                                  ),
+                                0
+                              ) * 0.1
+                            ).toFixed(2)}
+                          </span>
+
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between">
+
+                        <span className="text-sm text-[#64748B]">
+                          Sales Tax
+                        </span>
+
+                        <span className="text-sm font-medium text-[#1E293B]">
+                          $0.00
+                        </span>
+
+                      </div>
+
+                      <div className="flex items-center justify-between">
+
+                        <span className="text-sm text-[#64748B]">
+                          Shipping
+                        </span>
+
+                        <span className="text-sm font-medium text-[#1E293B]">
+                          $
+                          {selectedShipping ===
+                            "overnight"
+                            ? "75.00"
+                            : "19.99"}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                    {/* TOTAL */}
+                    <div className="mt-5 border-t border-[#E5E7EB] pt-5">
+
+                      <div className="flex items-center justify-between">
+
+                        <span className="text-base font-semibold text-[#0F172A]">
+                          Total
+                        </span>
+
+                        <span className="text-2xl font-bold text-[#0F172A]">
+                          $
                           {(
                             checkoutItems.reduce(
                               (
@@ -1873,75 +1917,13 @@ const Checkout = () => {
                                 Number(
                                   item.price
                                 ) *
-                                  Number(
-                                    item.quantity
-                                  ),
-                              0
-                            ) * 0.1
-                          ).toFixed(2)}
-                        </span>
-
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-
-                      <span className="text-sm text-[#64748B]">
-                        Sales Tax
-                      </span>
-
-                      <span className="text-sm font-medium text-[#1E293B]">
-                        $0.00
-                      </span>
-
-                    </div>
-
-                    <div className="flex items-center justify-between">
-
-                      <span className="text-sm text-[#64748B]">
-                        Shipping
-                      </span>
-
-                      <span className="text-sm font-medium text-[#1E293B]">
-                        $
-                        {selectedShipping ===
-                        "overnight"
-                          ? "75.00"
-                          : "19.99"}
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                  {/* TOTAL */}
-                  <div className="mt-5 border-t border-[#E5E7EB] pt-5">
-
-                    <div className="flex items-center justify-between">
-
-                      <span className="text-base font-semibold text-[#0F172A]">
-                        Total
-                      </span>
-
-                      <span className="text-2xl font-bold text-[#0F172A]">
-                        $
-                        {(
-                          checkoutItems.reduce(
-                            (
-                              total,
-                              item
-                            ) =>
-                              total +
-                              Number(
-                                item.price
-                              ) *
                                 Number(
                                   item.quantity
                                 ),
-                            0
-                          ) -
-                          (promoApplied
-                            ? checkoutItems.reduce(
+                              0
+                            ) -
+                            (promoApplied
+                              ? checkoutItems.reduce(
                                 (
                                   total,
                                   item
@@ -1950,33 +1932,33 @@ const Checkout = () => {
                                   Number(
                                     item.price
                                   ) *
-                                    Number(
-                                      item.quantity
-                                    ),
+                                  Number(
+                                    item.quantity
+                                  ),
                                 0
                               ) *
-                                0.1
-                            : 0) +
-                          (selectedShipping ===
-                          "overnight"
-                            ? 75
-                            : 19.99)
-                        ).toFixed(2)}
-                      </span>
+                              0.1
+                              : 0) +
+                            (selectedShipping ===
+                              "overnight"
+                              ? 75
+                              : 19.99)
+                          ).toFixed(2)}
+                        </span>
+
+                      </div>
 
                     </div>
 
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={
-                      handlePlaceOrder
-                    }
-                    disabled={
-                      isSubmitting
-                    }
-                    className="
+                    <button
+                      type="button"
+                      onClick={
+                        handlePlaceOrder
+                      }
+                      disabled={
+                        isSubmitting
+                      }
+                      className="
                       mt-6
                       flex
                       h-14
@@ -1998,49 +1980,49 @@ const Checkout = () => {
                       disabled:cursor-not-allowed
                       disabled:opacity-60
                     "
-                  >
+                    >
 
-                    {selectedMethod ===
-                      "card" && (
-                      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-white">
-                        <CreditCard
-                          className="h-4 w-4 text-[#0D59F2]"
-                          strokeWidth={2.3}
-                        />
-                      </span>
-                    )}
+                      {selectedMethod ===
+                        "card" && (
+                          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-white">
+                            <CreditCard
+                              className="h-4 w-4 text-[#0D59F2]"
+                              strokeWidth={2.3}
+                            />
+                          </span>
+                        )}
 
-                    <span>
-                      {isSubmitting
-                        ? "Placing Order..."
-                        : selectedMethod ===
-                            "card"
-                          ? "Pay by Card"
+                      <span>
+                        {isSubmitting
+                          ? "Placing Order..."
                           : selectedMethod ===
+                            "card"
+                            ? "Pay by Card"
+                            : selectedMethod ===
                               "cashapp"
-                            ? "$ Pay with Cash App"
-                            : "Pay with Venmo"}
-                    </span>
+                              ? "$ Pay with Cash App"
+                              : "Pay with Venmo"}
+                      </span>
 
-                    <span>
-                      $
-                      {(
-                        checkoutItems.reduce(
-                          (
-                            total,
-                            item
-                          ) =>
-                            total +
-                            Number(
-                              item.price
-                            ) *
+                      <span>
+                        $
+                        {(
+                          checkoutItems.reduce(
+                            (
+                              total,
+                              item
+                            ) =>
+                              total +
+                              Number(
+                                item.price
+                              ) *
                               Number(
                                 item.quantity
                               ),
-                          0
-                        ) -
-                        (promoApplied
-                          ? checkoutItems.reduce(
+                            0
+                          ) -
+                          (promoApplied
+                            ? checkoutItems.reduce(
                               (
                                 total,
                                 item
@@ -2049,67 +2031,67 @@ const Checkout = () => {
                                 Number(
                                   item.price
                                 ) *
-                                  Number(
-                                    item.quantity
-                                  ),
+                                Number(
+                                  item.quantity
+                                ),
                               0
                             ) *
-                              0.1
-                          : 0) +
-                        (selectedShipping ===
-                        "overnight"
-                          ? 75
-                          : 19.99)
-                      ).toFixed(2)}
-                    </span>
+                            0.1
+                            : 0) +
+                          (selectedShipping ===
+                            "overnight"
+                            ? 75
+                            : 19.99)
+                        ).toFixed(2)}
+                      </span>
 
-                  </button>
+                    </button>
 
-                  {/* TRUST / VALUE PROPS */}
-                  <div className="mt-6 space-y-3 border-t border-[#E5E7EB] pt-5">
+                    {/* TRUST / VALUE PROPS */}
+                    <div className="mt-6 space-y-3 border-t border-[#E5E7EB] pt-5">
 
-                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5">
 
-                      <LockKeyhole
-                        className="h-4 w-4 shrink-0 text-[#0D59F2]"
-                        strokeWidth={2}
-                      />
+                        <LockKeyhole
+                          className="h-4 w-4 shrink-0 text-[#0D59F2]"
+                          strokeWidth={2}
+                        />
 
-                      <p className="text-[11px] leading-4 text-[#64748B]">
-                        Secure checkout
-                      </p>
+                        <p className="text-[11px] leading-4 text-[#64748B]">
+                          Secure checkout
+                        </p>
+
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+
+                        <Check
+                          className="h-4 w-4 shrink-0 text-[#0D59F2]"
+                          strokeWidth={2.5}
+                        />
+
+                        <p className="text-[11px] leading-4 text-[#64748B]">
+                          Third-party lab tested
+                        </p>
+
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+
+                        <ShoppingBag
+                          className="h-4 w-4 shrink-0 text-[#0D59F2]"
+                          strokeWidth={2}
+                        />
+
+                        <p className="text-[11px] leading-4 text-[#64748B]">
+                          Discreet packaging
+                        </p>
+
+                      </div>
 
                     </div>
-
-                    <div className="flex items-center gap-2.5">
-
-                      <Check
-                        className="h-4 w-4 shrink-0 text-[#0D59F2]"
-                        strokeWidth={2.5}
-                      />
-
-                      <p className="text-[11px] leading-4 text-[#64748B]">
-                        Third-party lab tested
-                      </p>
-
-                    </div>
-
-                    <div className="flex items-center gap-2.5">
-
-                      <ShoppingBag
-                        className="h-4 w-4 shrink-0 text-[#0D59F2]"
-                        strokeWidth={2}
-                      />
-
-                      <p className="text-[11px] leading-4 text-[#64748B]">
-                        Discreet packaging
-                      </p>
-
-                    </div>
-
-                  </div>
-                </>
-              )}
+                  </>
+                )}
 
             </div>
           </div>

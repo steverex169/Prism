@@ -26,19 +26,19 @@ class OrderCreate(BaseModel):
     total: int
     payment: str
     payment_method: str
-    promotion: Optional[str] = None
     status: Optional[str] = "pending"
+    research_field: str
 
 
 class OrderUpdate(BaseModel):
     order_number: Optional[str] = None
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
+    research_field: str
     items: Optional[int] = None
     total: Optional[int] = None
     payment: Optional[str] = None
     payment_method: Optional[str] = None
-    promotion: Optional[str] = None
     status: Optional[str] = None
 
 
@@ -47,11 +47,11 @@ class OrderResponse(BaseModel):
     order_number: str
     customer_name: str
     customer_email: str
+    research_field: str
     items: int
     total: int
     payment: str
     payment_method: str
-    promotion: Optional[str] = None
     status: str
     date: Optional[datetime] = None
 
@@ -163,6 +163,7 @@ def create_order(
         order_number=order_data.order_number,
         customer_name=order_data.customer_name,
         customer_email=order_data.customer_email,
+        research_field=order_data.research_field,
         items=order_data.items,
         total=order_data.total,
         payment=order_data.payment,
