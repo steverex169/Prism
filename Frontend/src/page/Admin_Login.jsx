@@ -39,7 +39,7 @@ const Admin_Login = () => {
         );
       }
 
-      window.location.href = "/admin";
+      window.location.replace("/admin");
 
     } catch (error) {
       console.error("Admin login error:", error);

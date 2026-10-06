@@ -62,35 +62,70 @@ const ProtectedAdmin = () => {
   const [checking, setChecking] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
 
-  useEffect(() => {
-    const checkAdminAuthentication = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/admin/status`,
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
-
-        if (response.ok) {
-          setAuthenticated(true);
-        } else {
-          setAuthenticated(false);
+  const checkAdminAuthentication = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/status`,
+        {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
         }
-      } catch (error) {
-        console.error(
-          "Admin authentication check error:",
-          error
-        );
+      );
 
+      if (response.ok) {
+        setAuthenticated(true);
+      } else {
         setAuthenticated(false);
-      } finally {
-        setChecking(false);
+      }
+    } catch (error) {
+      console.error(
+        "Admin authentication check error:",
+        error
+      );
+
+      setAuthenticated(false);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAdminAuthentication();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setChecking(true);
+        checkAdminAuthentication();
       }
     };
 
-    checkAdminAuthentication();
+    const handlePageShow = () => {
+      setChecking(true);
+      checkAdminAuthentication();
+    };
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    window.addEventListener(
+      "pageshow",
+      handlePageShow
+    );
+
+    return () => {
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+
+      window.removeEventListener(
+        "pageshow",
+        handlePageShow
+      );
+    };
   }, []);
 
   if (checking) {

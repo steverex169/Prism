@@ -68,9 +68,9 @@ HERO_SECTIONS = [
         "path": "/contact",
     },
     {
-        "key": "catalog",
-        "name": "Catalog",
-        "path": "/catalog",
+        "key": "quality_assurance",
+        "name": "Quality Assurance",
+        "path": "/",
     },
 ]
 
@@ -141,11 +141,19 @@ async def save_image(image: UploadFile):
     # CHECK 16:9 RATIO
     # -------------------------
 
-    if width / height != 16 / 9:
+    actual_ratio = width / height
+    target_ratio = 16 / 9
+
+    # Allow small difference from exact 16:9
+    tolerance = 0.01
+
+    if abs(actual_ratio - target_ratio) > tolerance:
         raise HTTPException(
             status_code=400,
-            detail=f"Image must have a 16:9 aspect ratio. "
-                   f"Uploaded image is {width}x{height}."
+            detail=(
+                f"Image must have approximately a 16:9 aspect ratio. "
+                f"Uploaded image is {width}x{height}."
+            )
         )
 
     # -------------------------
@@ -163,34 +171,6 @@ async def save_image(image: UploadFile):
         f.write(content)
 
     # Always store URL-friendly path
-    return file_path.replace("\\", "/")
-    extension = os.path.splitext(image.filename)[1].lower()
-
-    if extension not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail="Only PNG, JPG, JPEG and WEBP images are allowed"
-        )
-
-    if image.content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid image format"
-        )
-
-    content = await image.read()
-
-    filename = f"{uuid.uuid4()}{extension}"
-
-    file_path = os.path.join(
-        UPLOAD_FOLDER,
-        filename
-    )
-
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    # Always store URL-friendly path in database
     return file_path.replace("\\", "/")
 
 @router.get("/sections")

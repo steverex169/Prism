@@ -36,7 +36,7 @@ def admin_login(
         key="admin_authenticated",
         value="true",
         httponly=True,
-        secure=False,
+        secure=True,
         samesite="lax",
         max_age=60 * 60 * 8
     )

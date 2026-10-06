@@ -173,9 +173,13 @@ const HeroPage = () => {
             const { width, height } = image;
 
             // Exact 16:9 check
-            if (width * 9 !== height * 16) {
+            // Approximately 16:9 check
+            const actualRatio = width / height;
+            const targetRatio = 16 / 9;
+            const tolerance = 0.01;
+            if (Math.abs(actualRatio - targetRatio) > tolerance) {
                 setImageError(
-                    `Image must have a 16:9 ratio. Selected image is ${width}×${height}.`
+                    `Image must have approximately a 16:9 ratio. Selected image is ${width}×${height}.`
                 );
 
                 URL.revokeObjectURL(imageUrl);

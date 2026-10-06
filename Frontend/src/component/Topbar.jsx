@@ -40,7 +40,7 @@ const Topbar = () => {
         throw new Error("Logout failed");
       }
 
-      navigate("/login");
+      window.location.replace("/pannel/login");
     } catch (error) {
       console.error("Logout error:", error);
     }

@@ -2,9 +2,14 @@ import React, { useEffect, useState } from "react";
 import prismQuality from "../assets/prisim-quality.webp";
 import { Plus, X } from "lucide-react";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "";
+
 const Main_page = () => {
   const [activeFaq, setActiveFaq] = useState(0);
   const [heroImage, setHeroImage] = useState(null);
+  const [aboutImage, setAboutImage] = useState(null);
+  const [qualityImage, setQualityImage] = useState(null);
   const heroData = {
     backgroundImage: heroImage,
 
@@ -55,10 +60,10 @@ const Main_page = () => {
   ];
 
   useEffect(() => {
-    const fetchHomeHero = async () => {
+    const fetchHeroImages = async () => {
       try {
         const response = await fetch(
-          `http://localhost:8000/hero/?t=${Date.now()}`,
+          `${API_BASE_URL}/hero/?t=${Date.now()}`,
           {
             cache: "no-store",
           }
@@ -70,34 +75,65 @@ const Main_page = () => {
 
         const result = await response.json();
 
-        console.log("Hero API response:", result);
-
         const homeHero = result.data?.find(
           (hero) =>
             hero.section_name?.trim().toLowerCase() === "home"
         );
 
-        console.log("Home hero:", homeHero);
+        const aboutHero = result.data?.find(
+          (hero) =>
+            hero.section_name?.trim().toLowerCase() === "about"
+        );
+
+        const qualityHero = result.data?.find(
+          (hero) =>
+            hero.section_name?.trim().toLowerCase() ===
+            "quality_assurance"
+        );
 
         if (homeHero?.image_url) {
-          const imageUrl = `http://localhost:8000/${homeHero.image_url}`;
+          const imageUrl = `${API_BASE_URL}/${homeHero.image_url}`;
 
-          console.log("Hero image URL:", imageUrl);
-
-          setHeroImage(`${imageUrl}?t=${Date.now()}`);
+          setHeroImage(
+            `${imageUrl}?t=${Date.now()}`
+          );
         } else {
-          console.log("No Home hero image found");
           setHeroImage(null);
         }
+
+        if (aboutHero?.image_url) {
+          const imageUrl = `${API_BASE_URL}/${aboutHero.image_url}`;
+
+          setAboutImage(
+            `${imageUrl}?t=${Date.now()}`
+          );
+        } else {
+          setAboutImage(null);
+        }
+
+        if (qualityHero?.image_url) {
+          const imageUrl = `${API_BASE_URL}/${qualityHero.image_url}`;
+
+          setQualityImage(
+            `${imageUrl}?t=${Date.now()}`
+          );
+        } else {
+          setQualityImage(null);
+        }
+
       } catch (error) {
         console.error(
-          "Failed to load Home hero image:",
+          "Error fetching hero images:",
           error
         );
+
+        setHeroImage(null);
+        setAboutImage(null);
+        setQualityImage(null);
       }
     };
 
-    fetchHomeHero();
+    fetchHeroImages();
   }, []);
 
   return (
@@ -507,7 +543,7 @@ const Main_page = () => {
         "
             >
               <img
-                src={prismQuality}
+                src={qualityImage || prismQuality}
                 alt="Prism Wellness quality assurance"
                 className="
             h-[360px]
