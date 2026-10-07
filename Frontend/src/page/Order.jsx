@@ -151,9 +151,9 @@ const Order = () => {
 
                 total:
                     order.total !== null &&
-                        order.total !== undefined
-                        ? `$${Number(order.total).toFixed(2)}`
-                        : "$0.00",
+                    order.total !== undefined
+                    ? Number(order.total)
+                    : 0,
 
                 method:
                     order.payment_method || "Unknown",
