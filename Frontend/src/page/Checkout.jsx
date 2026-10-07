@@ -39,6 +39,59 @@ const Checkout = () => {
   const [promoApplied, setPromoApplied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const syncAbandonedCart = async () => {
+    if (!checkoutItems || checkoutItems.length === 0) {
+      return;
+    }
+
+    const name = shippingInfo.fullName.trim();
+    const email = shippingInfo.email.trim();
+    const phone = shippingInfo.phone.trim();
+
+    if (!name || !email || !phone) {
+      return;
+    }
+
+    const totalItems = checkoutItems.reduce(
+      (total, item) =>
+        total + Number(item.quantity || 0),
+      0
+    );
+
+    const cartTotal = checkoutItems.reduce(
+      (total, item) =>
+        total +
+        Number(item.price || 0) *
+        Number(item.quantity || 0),
+      0
+    );
+
+    try {
+      await fetch(`${API_BASE_URL}/abandoned-carts/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          customer_name: name,
+          customer_email: email,
+          customer_phone: phone,
+          research_field:
+            shippingInfo.researchField.trim(),
+          cart_items: checkoutItems,
+          items: totalItems,
+          total: Math.round(cartTotal),
+        }),
+      });
+    } catch (error) {
+      console.error(
+        "Failed to save abandoned cart:",
+        error
+      );
+    }
+  };
+
   const [shippingId, setShippingId] = useState(() => {
     return localStorage.getItem(SHIPPING_ID_KEY);
   });
@@ -204,6 +257,27 @@ const Checkout = () => {
       setCheckoutItems([]);
     }
   }, []);
+
+  useEffect(() => {
+    if (
+      checkoutItems.length > 0 &&
+      shippingInfo.fullName.trim() &&
+      shippingInfo.email.trim() &&
+      shippingInfo.phone.trim()
+    ) {
+      const timer = setTimeout(() => {
+        syncAbandonedCart();
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [
+    checkoutItems,
+    shippingInfo.fullName,
+    shippingInfo.email,
+    shippingInfo.phone,
+    shippingInfo.researchField,
+  ]);
 
   /*
    * LOAD SAVED SHIPPING INFORMATION

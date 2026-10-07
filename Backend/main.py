@@ -10,6 +10,7 @@ from Endpoint.Order_endpoint import router as order_endpoint
 from Endpoint.Product_endpoint import router as product_endpoint
 from Endpoint.shipping_endpoint import router as shipping_router
 from Endpoint.Admin_endpoint import router as admin_endpoint
+from Endpoint.AbandonedCart_endpoint import router as abandoned_cart_endpoint
 
 load_dotenv()
 
@@ -41,7 +42,7 @@ app.include_router(order_endpoint)
 app.include_router(product_endpoint)
 app.include_router(shipping_router)
 app.include_router(admin_endpoint)
-
+app.include_router(abandoned_cart_endpoint)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host=os.getenv("HOST"), port=int(os.getenv("PORT")))

@@ -151,9 +151,9 @@ const Order = () => {
 
                 total:
                     order.total !== null &&
-                    order.total !== undefined
-                    ? Number(order.total)
-                    : 0,
+                        order.total !== undefined
+                        ? Number(order.total)
+                        : 0,
 
                 method:
                     order.payment_method || "Unknown",
@@ -323,6 +323,7 @@ const Order = () => {
             order_number: order.order_number || "",
             customer_name: order.customer_name || "",
             customer_email: order.customer_email || "",
+            research_field: order.research_field || "",
             items: order.items || 0,
             total: order.total || 0,
             payment: order.payment || "Unpaid",
@@ -369,6 +370,9 @@ const Order = () => {
 
                         customer_email:
                             editingOrder.customer_email.trim(),
+
+                        research_field:
+                            editingOrder.research_field.trim(),
 
                         items: Number(editingOrder.items),
 

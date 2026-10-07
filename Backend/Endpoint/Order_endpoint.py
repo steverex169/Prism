@@ -6,6 +6,7 @@ from datetime import datetime
 
 from Database import get_db
 from Model.order_model import OrderModel
+from Model.abandoned_cart_model import AbandonedCartModel
 
 
 router = APIRouter(
@@ -174,6 +175,27 @@ def create_order(
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
+    abandoned_cart = (
+        db.query(AbandonedCartModel)
+        .filter(
+            AbandonedCartModel.customer_email ==
+            order_data.customer_email.strip().lower()
+        )
+        .filter(
+            AbandonedCartModel.status.in_(
+                ["pending", "followed_up"]
+            )
+        )
+        .order_by(
+            AbandonedCartModel.id.desc()
+        )
+        .first()
+    )
+
+    if abandoned_cart:
+        abandoned_cart.status = "ordered"
+        abandoned_cart.order_id = new_order.id
+        db.commit()
 
     return new_order
 

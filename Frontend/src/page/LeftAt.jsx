@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     CircleAlert,
     Mail,
@@ -8,238 +8,548 @@ import {
     Check,
 } from "lucide-react";
 
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "";
+
+const tabs = [
+    {
+        id: "followup",
+        label: "To follow up",
+    },
+    {
+        id: "followed",
+        label: "Followed up",
+    },
+    {
+        id: "ordered",
+        label: "Went on to order",
+    },
+];
+
+const formatDate = (dateString) => {
+    if (!dateString) {
+        return "";
+    }
+
+    const date = new Date(dateString);
+
+    return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+    });
+};
+
+const formatTime = (dateString) => {
+    if (!dateString) {
+        return "";
+    }
+
+    const date = new Date(dateString);
+
+    return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+    });
+};
+
+const getLastActiveText = (dateString) => {
+    if (!dateString) {
+        return "LAST ACTIVE RECENTLY";
+    }
+
+    const date = new Date(dateString);
+    const now = new Date();
+
+    const diffMs = now - date;
+    const diffMinutes = Math.floor(
+        diffMs / (1000 * 60)
+    );
+
+    if (diffMinutes < 1) {
+        return "LAST ACTIVE JUST NOW";
+    }
+
+    if (diffMinutes < 60) {
+        return `LAST ACTIVE ${diffMinutes} MIN AGO`;
+    }
+
+    const diffHours = Math.floor(
+        diffMinutes / 60
+    );
+
+    if (diffHours < 24) {
+        return `LAST ACTIVE ${diffHours} ${
+            diffHours === 1 ? "HOUR" : "HOURS"
+        } AGO`;
+    }
+
+    const diffDays = Math.floor(
+        diffHours / 24
+    );
+
+    return `LAST ACTIVE ${diffDays} ${
+        diffDays === 1 ? "DAY" : "DAYS"
+    } AGO`;
+};
+
+const getCartName = (cartItems) => {
+    if (!cartItems || cartItems.length === 0) {
+        return "Cart";
+    }
+
+    if (cartItems.length === 1) {
+        return cartItems[0]?.name || "Cart";
+    }
+
+    return `${cartItems[0]?.name || "Cart"} + ${
+        cartItems.length - 1
+    } more`;
+};
+
 const LeftAt = () => {
-    const [activeTab, setActiveTab] = useState("followup");
+    const [activeTab, setActiveTab] =
+        useState("followup");
 
-    // Static data for now
-    const customers = [
-        {
-            id: 1,
-            name: "test",
-            email: "test@example.com",
-            phone: "+1 (555) 123-4567",
-            total: "$297.00",
-            date: "Oct 01, 2026",
-            time: "3:42 PM",
-            lastActive: "LAST ACTIVE 1 DAY AGO",
-            items: "2",
-            cart: "Wellness Starter Package",
-        },
-    ];
+    const [customers, setCustomers] = useState([]);
 
-    const tabs = [
-        {
-            key: "followup",
-            label: "To follow up",
-            count: customers.length,
-        },
-        {
-            key: "followed",
-            label: "Followed up",
-            count: 0,
-        },
-        {
-            key: "ordered",
-            label: "Went on to order",
-            count: 0,
-        },
-    ];
+    const [loading, setLoading] =
+        useState(true);
+
+    const [error, setError] =
+        useState("");
+
+    const fetchCustomers = async () => {
+        try {
+            setLoading(true);
+            setError("");
+
+            const response = await fetch(
+                `${API_BASE_URL}/abandoned-carts/`,
+                {
+                    credentials: "include",
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Failed to load abandoned customers"
+                );
+            }
+
+            const data = await response.json();
+
+            setCustomers(data);
+        } catch (error) {
+            console.error(
+                "Failed to fetch abandoned customers:",
+                error
+            );
+
+            setError(
+                "Unable to load abandoned customers."
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCustomers();
+    }, []);
+
+    const markFollowedUp = async (id) => {
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/abandoned-carts/${id}/followed-up`,
+                {
+                    method: "PUT",
+                    credentials: "include",
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Failed to mark customer as followed up"
+                );
+            }
+
+            setCustomers((currentCustomers) =>
+                currentCustomers.map((customer) =>
+                    customer.id === id
+                        ? {
+                              ...customer,
+                              status: "followed_up",
+                          }
+                        : customer
+                )
+            );
+
+            setActiveTab("followed");
+        } catch (error) {
+            console.error(
+                "Failed to mark customer:",
+                error
+            );
+
+            alert(
+                "Failed to mark customer as followed up."
+            );
+        }
+    };
+
+    const deleteCustomer = async (id) => {
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/abandoned-carts/${id}`,
+                {
+                    method: "DELETE",
+                    credentials: "include",
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Failed to delete customer"
+                );
+            }
+
+            setCustomers((currentCustomers) =>
+                currentCustomers.filter(
+                    (customer) =>
+                        customer.id !== id
+                )
+            );
+        } catch (error) {
+            console.error(
+                "Failed to delete customer:",
+                error
+            );
+
+            alert(
+                "Failed to delete customer."
+            );
+        }
+    };
+
+    const getCustomersForTab = () => {
+        if (activeTab === "followup") {
+            return customers.filter(
+                (customer) =>
+                    customer.status === "pending"
+            );
+        }
+
+        if (activeTab === "followed") {
+            return customers.filter(
+                (customer) =>
+                    customer.status ===
+                    "followed_up"
+            );
+        }
+
+        if (activeTab === "ordered") {
+            return customers.filter(
+                (customer) =>
+                    customer.status === "ordered"
+            );
+        }
+
+        return [];
+    };
 
     const visibleCustomers =
-        activeTab === "followup" ? customers : [];
+        getCustomersForTab();
 
     return (
-        <div className="w-full min-w-0">
-            {/* Informational Banner */}
-            <div className="mb-6 flex items-start gap-3 rounded-lg border-l-4 border-[#B06300] bg-[#FFF9E6] px-4 py-4 sm:px-5">
-                <CircleAlert
-                    size={21}
-                    className="mt-0.5 shrink-0 text-[#B06300]"
-                />
+        <div className="min-h-screen bg-slate-50 p-6">
+            <div className="max-w-7xl mx-auto">
 
-                <p className="text-sm leading-6 text-[#694B1B]">
-                    These are customers who added items to their cart{" "}
-                    <strong className="font-semibold text-[#4D3510]">
-                        without placing an order
-                    </strong>
-                    . A quick email or call can help recover the sale. If
-                    they{" "}
-                    <strong className="font-semibold text-[#4D3510]">
-                        went on to order
-                    </strong>
-                    , their status will be updated automatically.
-                </p>
-            </div>
+                <div className="mb-6">
+                    <div className="flex items-center gap-2">
+                        <CircleAlert
+                            size={22}
+                            className="text-red-500"
+                        />
 
-            {/* Tabs */}
-            <div className="mb-6 overflow-x-auto">
-                <div className="flex min-w-max gap-2">
-                    {tabs.map((tab) => {
-                        const isActive = activeTab === tab.key;
+                        <h1 className="text-2xl font-bold text-slate-800">
+                            Left At Checkout
+                        </h1>
+                    </div>
 
-                        return (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                onClick={() => setActiveTab(tab.key)}
-                                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-                                    isActive
-                                        ? "bg-[#151C28] text-white"
-                                        : "border border-slate-200 bg-[#F8FAFC] text-slate-700 hover:bg-white"
-                                }`}
-                            >
-                                {tab.label}
+                    <p className="text-sm text-slate-500 mt-1">
+                        Customers who left before
+                        completing their order.
+                    </p>
+                </div>
 
-                                <span
-                                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                                        isActive
-                                            ? "border-white/20 bg-white/10 text-white"
-                                            : "border-white bg-white text-slate-500"
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+
+                    <div className="flex border-b border-slate-200">
+                        {tabs.map((tab) => {
+                            const count =
+                                customers.filter(
+                                    (customer) => {
+                                        if (
+                                            tab.id ===
+                                            "followup"
+                                        ) {
+                                            return (
+                                                customer.status ===
+                                                "pending"
+                                            );
+                                        }
+
+                                        if (
+                                            tab.id ===
+                                            "followed"
+                                        ) {
+                                            return (
+                                                customer.status ===
+                                                "followed_up"
+                                            );
+                                        }
+
+                                        return (
+                                            customer.status ===
+                                            "ordered"
+                                        );
+                                    }
+                                ).length;
+
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() =>
+                                        setActiveTab(
+                                            tab.id
+                                        )
+                                    }
+                                    className={`px-6 py-4 text-sm font-semibold border-b-2 transition ${
+                                        activeTab ===
+                                        tab.id
+                                            ? "border-blue-600 text-blue-600"
+                                            : "border-transparent text-slate-500 hover:text-slate-700"
                                     }`}
                                 >
-                                    {tab.count}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+                                    {tab.label}
 
-            {/* Customer Cards */}
-            {visibleCustomers.length === 0 ? (
-                <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-12">
-                    <div className="text-center">
-                        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                            <Check
-                                size={24}
-                                className="text-slate-400"
-                            />
-                        </div>
+                                    {count > 0 && (
+                                        <span className="ml-2 text-xs bg-slate-100 rounded-full px-2 py-1">
+                                            {count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                        <h2 className="text-sm font-semibold text-slate-900">
-                            Nothing here
-                        </h2>
+                    <div className="p-6">
 
-                        <p className="mt-2 text-xs leading-5 text-slate-500">
-                            There are no customers in this section.
-                        </p>
+                        {loading && (
+                            <div className="text-center py-12 text-slate-500">
+                                Loading customers...
+                            </div>
+                        )}
+
+                        {!loading && error && (
+                            <div className="text-center py-12 text-red-500">
+                                {error}
+                            </div>
+                        )}
+
+                        {!loading &&
+                            !error &&
+                            visibleCustomers.length ===
+                                0 && (
+                                <div className="text-center py-12 text-slate-500">
+                                    No customers in this section.
+                                </div>
+                            )}
+
+                        {!loading &&
+                            !error &&
+                            visibleCustomers.map(
+                                (customer) => (
+                                    <div
+                                        key={
+                                            customer.id
+                                        }
+                                        className="border border-slate-200 rounded-xl p-5 mb-4"
+                                    >
+                                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+
+                                            <div className="flex-1">
+
+                                                <div className="flex items-start justify-between gap-4">
+
+                                                    <div>
+                                                        <h2 className="text-lg font-bold text-slate-800">
+                                                            {
+                                                                customer.customer_name
+                                                            }
+                                                        </h2>
+
+                                                        <div className="flex flex-wrap gap-4 mt-2 text-sm text-slate-500">
+
+                                                            <span className="flex items-center gap-1">
+                                                                <Mail
+                                                                    size={
+                                                                        15
+                                                                    }
+                                                                />
+                                                                {
+                                                                    customer.customer_email
+                                                                }
+                                                            </span>
+
+                                                            <span className="flex items-center gap-1">
+                                                                <Phone
+                                                                    size={
+                                                                        15
+                                                                    }
+                                                                />
+                                                                {
+                                                                    customer.customer_phone
+                                                                }
+                                                            </span>
+
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="text-right">
+                                                        <div className="text-lg font-bold text-slate-800">
+                                                            $
+                                                            {Number(
+                                                                customer.total ||
+                                                                    0
+                                                            ).toFixed(
+                                                                2
+                                                            )}
+                                                        </div>
+
+                                                        <div className="text-xs text-slate-400">
+                                                            {
+                                                                customer.items
+                                                            }{" "}
+                                                            items
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-slate-400">
+
+                                                    <span className="flex items-center gap-1">
+                                                        <Clock3
+                                                            size={
+                                                                14
+                                                            }
+                                                        />
+
+                                                        {
+                                                            customer.last_active
+                                                        }
+                                                    </span>
+
+                                                    <span>
+                                                        {formatDate(
+                                                            customer.last_active
+                                                        )}
+                                                    </span>
+
+                                                    <span>
+                                                        {formatTime(
+                                                            customer.last_active
+                                                        )}
+                                                    </span>
+
+                                                </div>
+
+                                                <div className="mt-3 text-sm text-slate-600">
+                                                    <span className="font-semibold">
+                                                        Cart:
+                                                    </span>{" "}
+                                                    {getCartName(
+                                                        customer.cart_items
+                                                    )}
+                                                </div>
+
+                                                {customer.research_field && (
+                                                    <div className="mt-1 text-sm text-slate-600">
+                                                        <span className="font-semibold">
+                                                            Research:
+                                                        </span>{" "}
+                                                        {
+                                                            customer.research_field
+                                                        }
+                                                    </div>
+                                                )}
+
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+
+                                                <a
+                                                    href={`mailto:${customer.customer_email}`}
+                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                                                >
+                                                    <Mail
+                                                        size={
+                                                            16
+                                                        }
+                                                    />
+                                                    Email them
+                                                </a>
+
+                                                {customer.status ===
+                                                    "pending" && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            markFollowedUp(
+                                                                customer.id
+                                                            )
+                                                        }
+                                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
+                                                    >
+                                                        <Check
+                                                            size={
+                                                                16
+                                                            }
+                                                        />
+                                                        Mark as followed up
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        deleteCustomer(
+                                                            customer.id
+                                                        )
+                                                    }
+                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 transition"
+                                                >
+                                                    <Trash2
+                                                        size={
+                                                            16
+                                                        }
+                                                    />
+                                                    Delete
+                                                </button>
+
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                )
+                            )}
+
                     </div>
                 </div>
-            ) : (
-                <div className="space-y-5">
-                    {visibleCustomers.map((customer) => (
-                        <div
-                            key={customer.id}
-                            className="overflow-hidden rounded-xl border border-slate-200 border-l-4 border-l-[#B06300] bg-white shadow-sm"
-                        >
-                            {/* Card Header */}
-                            <div className="flex flex-col gap-5 p-4 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
-                                {/* Customer Information */}
-                                <div className="min-w-0">
-                                    <h2 className="text-base font-semibold text-slate-900">
-                                        {customer.name}
-                                    </h2>
-
-                                    <div className="mt-3 flex flex-col gap-2">
-                                        <a
-                                            href={`mailto:${customer.email}`}
-                                            className="inline-flex min-w-0 items-center gap-2 text-sm text-[#1A66FF] hover:underline"
-                                        >
-                                            <Mail
-                                                size={15}
-                                                className="shrink-0"
-                                            />
-                                            <span className="truncate">
-                                                {customer.email}
-                                            </span>
-                                        </a>
-
-                                        <a
-                                            href={`tel:${customer.phone}`}
-                                            className="inline-flex items-center gap-2 text-sm text-[#1A66FF] hover:underline"
-                                        >
-                                            <Phone
-                                                size={15}
-                                                className="shrink-0"
-                                            />
-                                            <span>{customer.phone}</span>
-                                        </a>
-                                    </div>
-
-                                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#E1ECFF] px-3 py-1.5 text-[10px] font-bold tracking-wide text-[#1551B5]">
-                                        <Clock3 size={12} />
-                                        {customer.lastActive}
-                                    </div>
-                                </div>
-
-                                {/* Order Total */}
-                                <div className="shrink-0 lg:text-right">
-                                    <p className="text-xl font-bold text-slate-900 sm:text-2xl">
-                                        {customer.total}
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-slate-500">
-                                        {customer.date} · {customer.time}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Cart Contents */}
-                            <div className="mx-4 mb-4 rounded-lg bg-[#F8F9FA] p-4 sm:mx-6 sm:mb-6">
-                                <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                    What was in their cart
-                                </p>
-
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-xs font-semibold text-slate-700 shadow-sm">
-                                            {customer.items}
-                                        </span>
-
-                                        <p className="truncate text-sm font-medium text-slate-800">
-                                            {customer.cart}
-                                        </p>
-                                    </div>
-
-                                    <span className="text-xs text-slate-500">
-                                        {customer.items}{" "}
-                                        {customer.items === "1"
-                                            ? "item"
-                                            : "items"}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Action Footer */}
-                            <div className="flex flex-col gap-2 border-t border-slate-200 px-4 py-4 sm:flex-row sm:flex-wrap sm:px-6">
-                                <button
-                                    type="button"
-                                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#10B981] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#059669]"
-                                >
-                                    <Mail size={15} />
-                                    Email them
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
-                                >
-                                    <Check size={15} />
-                                    Mark as followed up
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
-                                >
-                                    <Trash2 size={15} />
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+            </div>
         </div>
     );
 };
