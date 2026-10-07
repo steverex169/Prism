@@ -788,7 +788,7 @@ const Order = () => {
                                         </td>
 
                                         <td className="px-6 py-4 text-sm font-semibold text-slate-700">
-                                            {order.total}
+                                            ${Number(order.total).toFixed(2)}
                                         </td>
 
                                         <td className="px-6 py-4">
