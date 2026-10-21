@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
 const HeroPage = () => {
     const [heroes, setHeroes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,7 +23,7 @@ const HeroPage = () => {
     const fetchSections = async () => {
         try {
             const response = await fetch(
-                "http://localhost:8000/hero/sections"
+                `${API_BASE_URL}/hero/sections`
             );
 
             if (!response.ok) {
@@ -44,7 +46,7 @@ const HeroPage = () => {
         try {
             setLoading(true);
 
-            const response = await fetch("http://localhost:8000/hero/");
+            const response = await fetch(`${API_BASE_URL}/hero/`);
 
             if (!response.ok) {
                 throw new Error("Failed to fetch hero images");
@@ -96,7 +98,7 @@ const HeroPage = () => {
 
         setPreview(
             hero.image_url
-                ? `http://localhost:8000/${hero.image_url}`
+                ? `${API_BASE_URL}/${String(hero.image_url || "").replace(/^\/+/, "")}`
                 : null
         );
 
@@ -236,8 +238,8 @@ const HeroPage = () => {
             }
 
             const url = editingHero
-                ? `http://localhost:8000/hero/${editingHero.id}`
-                : "http://localhost:8000/hero/";
+                ? `${API_BASE_URL}/hero/${editingHero.id}`
+                : `${API_BASE_URL}/hero/`;
 
             const response = await fetch(url, {
                 method: editingHero ? "PUT" : "POST",
@@ -277,7 +279,7 @@ const HeroPage = () => {
 
         try {
             const response = await fetch(
-                `http://localhost:8000/hero/${hero.id}`,
+                `${API_BASE_URL}/hero/${hero.id}`,
                 {
                     method: "DELETE",
                 }
@@ -392,7 +394,7 @@ const HeroPage = () => {
                                     <td className="px-6 py-4">
                                         <div className="h-16 w-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                                             <img
-                                                src={`http://localhost:8000/${hero.image_url}`}
+                                                src={`${API_BASE_URL}/${String(hero.image_url || "").replace(/^\/+/, "")}`}
                                                 alt={hero.alt_text || "Hero image"}
                                                 className="h-full w-full object-cover"
                                             />
