@@ -25,9 +25,97 @@ const Topbar = () => {
     )?.[1] ||
     "orders";
 
-  const handleExport = () => {
-    console.log(`Export CSV for: ${activeTab}`);
+
+  const handleExport = async () => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+
+      const response = await fetch(`${API_BASE_URL}/orders/`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const contentType = response.headers.get("content-type");
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch orders for export.");
+      }
+
+      if (!contentType?.includes("application/json")) {
+        throw new Error("Server returned an invalid response.");
+      }
+
+      const orders = await response.json();
+
+      if (!Array.isArray(orders)) {
+        throw new Error("Invalid orders response.");
+      }
+
+      const headers = [
+        "ID",
+        "Order Number",
+        "Customer",
+        "Email",
+        "Items",
+        "Total",
+        "Payment",
+        "Payment Method",
+        "Status",
+        "Date",
+      ];
+
+      const escapeCSV = (value) => {
+        let text = String(value ?? "");
+
+        // Prevent spreadsheet formula injection
+        if (/^[\s]*[=+\-@]/.test(text)) {
+          text = "'" + text;
+        }
+
+        return `"${text.replace(/"/g, '""')}"`;
+      };
+
+      const rows = orders.map((order) => [
+        order.id,
+        order.order_number || "",
+        order.customer_name || "",
+        order.customer_email || "",
+        order.items ?? 0,
+        Number(order.total || 0).toFixed(2),
+        order.payment || "Unpaid",
+        order.payment_method || "Unknown",
+        order.status || "Pending",
+        order.date
+          ? new Date(order.date).toLocaleDateString("en-US")
+          : "",
+      ]);
+
+      const csvContent = [
+        headers.map(escapeCSV).join(","),
+        ...rows.map((row) => row.map(escapeCSV).join(",")),
+      ].join("\r\n");
+
+      const blob = new Blob(["\uFEFF", csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("CSV export failed:", error);
+      window.alert(error.message || "Failed to export orders.");
+    }
   };
+
 
   const handleLogout = async () => {
     try {

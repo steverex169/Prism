@@ -21,7 +21,7 @@ const Main_page = () => {
       "We provide third-party tested research peptides manufactured to strict quality and purity standards.",
 
     buttonText: "View Products",
-    buttonLink: "#products",
+    buttonLink: "/catalog",
   };
 
   const aboutData = {
@@ -33,7 +33,7 @@ const Main_page = () => {
     description:
       "High-quality peptide compounds designed with precision, purity, and innovation for scientific and laboratory applications.",
     buttonText: "About Us",
-    buttonLink: "#about",
+    buttonLink: "/about",
   };
 
   const faqData = [
