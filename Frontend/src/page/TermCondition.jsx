@@ -330,8 +330,8 @@ const TermCondition = () => {
             bannerTitle="& Conditions"
             overviewLabel="Agreement Overview"
             overviewParagraphs={[
-                "These Terms and Conditions govern your access to and use of the Prism Wellness website, products, services, and any related content, communications, or transactions.",
-                "If you do not agree with these Terms, you must not use this website or purchase products from Prism Wellness.",
+                "These Terms and Conditions govern your access to and use of the Prisim Wellness website, products, services, and any related content, communications, or transactions.",
+                "If you do not agree with these Terms, you must not use this website or purchase products from Prisim Wellness.",
             ]}
             sections={termsSections}
         />
