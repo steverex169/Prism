@@ -139,7 +139,7 @@ const Topbar = () => {
           message: "Logged out successfully.",
         })
       );
-      window.location.replace("/pannel/login");
+      window.location.replace("/panel/login");
     } catch (error) {
       console.error("Admin logout error:", error);
       showError(error.message || "Unable to log out. Please try again.");
@@ -154,7 +154,7 @@ const Topbar = () => {
           {activeTab}
         </h1>
         <p className="mt-0.5 text-xs text-slate-400">
-          Prism Wellness / Store Panel
+          Prisim Wellness / Store Panel
         </p>
       </div>
 
