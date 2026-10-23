@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import authBg from "../assets/bgImg.jpg";
 
 const API_BASE_URL =
@@ -7,6 +7,7 @@ const API_BASE_URL =
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -117,7 +118,7 @@ const Login = () => {
         The browser stores the HttpOnly cookie automatically.
       */
 
-      navigate("/");
+      navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (err) {
       if (err instanceof TypeError) {
         setError(
@@ -408,6 +409,7 @@ const Login = () => {
           Don't have an account?{" "}
           <Link
             to="/signup"
+            state={{ from: location.state?.from }}
             className="
               font-semibold
               text-[#0e9dce]
