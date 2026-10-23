@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
@@ -7,6 +7,7 @@ from datetime import datetime
 from Database import get_db
 from Model.order_model import OrderModel
 from Model.abandoned_cart_model import AbandonedCartModel
+from Endpoint.User_endpoint import get_user_from_request, compliance_complete
 
 
 router = APIRouter(
@@ -129,8 +130,17 @@ def get_order(
 )
 def create_order(
     order_data: OrderCreate,
+    request: Request,
     db: Session = Depends(get_db)
 ):
+    user = get_user_from_request(request, db)
+
+    if not compliance_complete(user):
+        raise HTTPException(
+            status_code=403,
+            detail="Complete your qualified researcher account before placing an order."
+        )
+
     existing_order = (
         db.query(OrderModel)
         .filter(
@@ -162,9 +172,9 @@ def create_order(
     new_order = OrderModel(
         id=new_id,
         order_number=order_data.order_number,
-        customer_name=order_data.customer_name,
-        customer_email=order_data.customer_email,
-        research_field=order_data.research_field,
+        customer_name=user.full_name,
+        customer_email=user.email,
+        research_field=user.research_field,
         items=order_data.items,
         total=order_data.total,
         payment=order_data.payment,
@@ -179,7 +189,7 @@ def create_order(
         db.query(AbandonedCartModel)
         .filter(
             AbandonedCartModel.customer_email ==
-            order_data.customer_email.strip().lower()
+            user.email.strip().lower()
         )
         .filter(
             AbandonedCartModel.status.in_(
