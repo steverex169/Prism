@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, } from "react";
 import {
   Navigate,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 
 import Top_Header from "./component/Top_Header.jsx";
@@ -152,6 +153,7 @@ const ProtectedAdmin = () => {
 
 
 const App = () => {
+
   return (
     <>
       <ScrollToTop />
@@ -233,6 +235,11 @@ const App = () => {
 
                 <Route
                   path="/"
+                  element={<Main_page />}
+                />
+
+                <Route
+                  path="/faq"
                   element={<Main_page />}
                 />
 

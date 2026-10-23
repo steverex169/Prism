@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import prismQuality from "../assets/prisim-quality.webp";
 import { Plus, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "";
@@ -135,6 +136,19 @@ const Main_page = () => {
 
     fetchHeroImages();
   }, []);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname === "/faq") {
+      requestAnimationFrame(() => {
+        document.getElementById("faq")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
+  }, [location.pathname]);
 
   return (
     <>
