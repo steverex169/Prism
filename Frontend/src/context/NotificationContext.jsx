@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -70,6 +71,25 @@ export function NotificationProvider({ children }) {
 
   const showSuccess = useCallback((message) => notify("success", message), [notify]);
   const showError = useCallback((message) => notify("error", message), [notify]);
+
+  useEffect(() => {
+    try {
+      const flash = sessionStorage.getItem("prismAdminFlash");
+
+      if (flash) {
+        sessionStorage.removeItem("prismAdminFlash");
+        const parsed = JSON.parse(flash);
+
+        if (parsed?.type === "error") {
+          showError(parsed.message);
+        } else {
+          showSuccess(parsed?.message || "Action completed successfully.");
+        }
+      }
+    } catch {
+      sessionStorage.removeItem("prismAdminFlash");
+    }
+  }, [showError, showSuccess]);
 
   return (
     <NotificationContext.Provider value={{ showSuccess, showError }}>
