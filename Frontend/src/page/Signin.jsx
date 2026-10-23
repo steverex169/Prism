@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import authBg from "../assets/bgImg.jpg";
 
 const API_BASE_URL =
@@ -7,6 +7,7 @@ const API_BASE_URL =
 
 const Signin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -294,7 +295,7 @@ const Signin = () => {
       });
 
       setTimeout(() => {
-        navigate("/");
+        navigate(location.state?.from?.pathname || "/", { replace: true });
       }, 700);
     } catch (err) {
       if (err instanceof TypeError) {
