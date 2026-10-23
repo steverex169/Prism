@@ -6,7 +6,7 @@ import { useNotifications } from "../context/NotificationContext.jsx";
 const Topbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { showError } = useNotifications();
+  const { showSuccess, showError } = useNotifications();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
   const tabs = {
@@ -111,9 +111,10 @@ const Topbar = () => {
       link.remove();
 
       URL.revokeObjectURL(url);
+      showSuccess("Orders exported successfully.");
     } catch (error) {
       console.error("CSV export failed:", error);
-      window.alert(error.message || "Failed to export orders.");
+      showError(error.message || "Failed to export orders.");
     }
   };
 
