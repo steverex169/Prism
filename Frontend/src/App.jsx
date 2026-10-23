@@ -142,7 +142,7 @@ const ProtectedAdmin = () => {
   if (!authenticated) {
     return (
       <Navigate
-        to="/pannel/login"
+        to="/panel/login"
         replace
       />
     );
