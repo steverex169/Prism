@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
+import { useNotifications } from "../context/NotificationContext.jsx";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "";
@@ -7,10 +8,11 @@ const API_BASE_URL =
 const Admin_Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const { showError } = useNotifications();
 
   const handleLogin = async () => {
     if (!password.trim()) {
-      alert("Please enter your password.");
+      showError("Please enter your password.");
       return;
     }
 
@@ -39,12 +41,19 @@ const Admin_Login = () => {
         );
       }
 
+      sessionStorage.setItem(
+        "prismAdminFlash",
+        JSON.stringify({
+          type: "success",
+          message: "Logged in successfully.",
+        })
+      );
       window.location.replace("/admin");
 
     } catch (error) {
       console.error("Admin login error:", error);
 
-      alert(
+      showError(
         error.message ||
         "Unable to login. Please try again."
       );
