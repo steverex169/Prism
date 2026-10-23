@@ -32,7 +32,7 @@ const Sidebar = () => {
         </div>
 
         <span className="whitespace-nowrap text-[17px] font-semibold tracking-tight">
-          Prism Wellness
+          Prisim Wellness
         </span>
       </div>
 
