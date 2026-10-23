@@ -558,7 +558,7 @@ const Main_page = () => {
             >
               <img
                 src={qualityImage || prismQuality}
-                alt="Prism Wellness quality assurance"
+                alt="Prisim Wellness quality assurance"
                 className="
             h-[360px]
             w-full
