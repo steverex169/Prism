@@ -46,6 +46,68 @@ const API_BASE_URL =
 
 const ProtectedCheckout = () => {
   const { cartItems } = useCart();
+  const location = useLocation();
+  const [checking, setChecking] = useState(true);
+  const [access, setAccess] = useState("checking");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const verifyCheckoutAccess = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/user/me`, {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          if (!cancelled) setAccess("login");
+          return;
+        }
+
+        const data = await response.json();
+        const user = data?.user;
+
+        if (!cancelled) {
+          setAccess(user?.compliance_complete === true ? "allowed" : "incomplete");
+        }
+      } catch {
+        if (!cancelled) setAccess("login");
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+
+    verifyCheckoutAccess();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (checking) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center bg-white text-sm text-[#697181]">
+        Verifying your researcher account...
+      </div>
+    );
+  }
+
+  if (access === "login") {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (access === "incomplete") {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-6 text-center">
+        <h1 className="text-2xl font-semibold text-[#1E293B]">Researcher verification required</h1>
+        <p className="mt-3 text-sm leading-6 text-[#64748B]">
+          Checkout is available only to accounts with completed age, qualified-researcher, research-field, research-use, and terms confirmations. Please contact support to update your account details.
+        </p>
+        <a href="/contact" className="mt-6 rounded-lg bg-[#0D59F2] px-5 py-3 text-sm font-semibold text-white">
+          Contact support
+        </a>
+      </div>
+    );
+  }
 
   if (!cartItems || cartItems.length === 0) {
     return <Navigate to="/catalog" replace />;
