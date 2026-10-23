@@ -6,6 +6,8 @@ import {
     Trash2,
     X,
 } from "lucide-react";
+import ConfirmDialog from "../component/ConfirmDialog.jsx";
+import { useNotifications } from "../context/NotificationContext.jsx";
 
 
 const API_BASE_URL =
@@ -44,6 +46,8 @@ export default function Product() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
+    const [deleteConfirmProduct, setDeleteConfirmProduct] = useState(null);
+    const { showSuccess, showError } = useNotifications();
 
     const [formData, setFormData] = useState(EMPTY_FORM);
 
@@ -76,6 +80,7 @@ export default function Product() {
             setProducts(data);
         } catch (error) {
             console.error("Error fetching products:", error);
+            showError(error.message || "Failed to load products.");
         } finally {
             setLoading(false);
         }
@@ -113,7 +118,7 @@ export default function Product() {
         ];
 
         if (!allowedTypes.includes(file.type)) {
-            alert("Only JPG, PNG and WEBP images are allowed.");
+            showError("Only JPG, PNG and WEBP images are allowed.");
 
             e.target.value = "";
             return;
@@ -140,7 +145,7 @@ export default function Product() {
             file.name.toLowerCase().endsWith(".pdf");
 
         if (!isPdf) {
-            alert("Only PDF files are allowed for the COA.");
+            showError("Only PDF files are allowed for the COA.");
 
             e.target.value = "";
             return;
@@ -246,7 +251,7 @@ export default function Product() {
         e.preventDefault();
 
         if (!formData.name.trim()) {
-            alert("Product name is required.");
+            showError("Product name is required.");
             return;
         }
 
@@ -254,7 +259,7 @@ export default function Product() {
             formData.price === "" ||
             Number(formData.price) < 0
         ) {
-            alert("Please enter a valid product price.");
+            showError("Please enter a valid product price.");
             return;
         }
 
@@ -392,6 +397,11 @@ export default function Product() {
 
 
             closeModal();
+            showSuccess(
+                editingProduct
+                    ? "Product updated successfully."
+                    : "Product created successfully."
+            );
 
         } catch (error) {
             console.error(
@@ -399,7 +409,7 @@ export default function Product() {
                 error
             );
 
-            alert(
+            showError(
                 error.message ||
                 "Failed to save product."
             );
@@ -410,53 +420,48 @@ export default function Product() {
     };
 
 
-    const handleDelete = async (productId) => {
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this product?"
-        );
+    const handleDelete = (product) => {
+        setDeleteConfirmProduct(product);
+    };
 
-        if (!confirmed) {
+    const confirmDelete = async () => {
+        if (!deleteConfirmProduct) {
             return;
         }
 
+        const product = deleteConfirmProduct;
+
         try {
-            setDeletingId(productId);
+            setDeletingId(product.id);
 
             const response = await fetch(
-                `${API_BASE_URL}/products/${productId}`,
+                `${API_BASE_URL}/products/${product.id}`,
                 {
                     method: "DELETE",
                     credentials: "include",
                 }
             );
 
-            const result = await response.json();
+            const result = await response.json().catch(() => ({}));
 
             if (!response.ok) {
                 throw new Error(
                     result.detail ||
-                    "Failed to delete product"
+                    "Failed to delete product."
                 );
             }
 
             setProducts((previous) =>
                 previous.filter(
-                    (product) =>
-                        product.id !== productId
+                    (item) => item.id !== product.id
                 )
             );
 
+            setDeleteConfirmProduct(null);
+            showSuccess(`${product.name} deleted successfully.`);
         } catch (error) {
-            console.error(
-                "Error deleting product:",
-                error
-            );
-
-            alert(
-                error.message ||
-                "Failed to delete product."
-            );
-
+            console.error("Error deleting product:", error);
+            showError(error.message || "Failed to delete product.");
         } finally {
             setDeletingId(null);
         }
@@ -658,7 +663,7 @@ export default function Product() {
                                                         type="button"
                                                         onClick={() =>
                                                             handleDelete(
-                                                                product.id
+                                                                product
                                                             )
                                                         }
                                                         disabled={
@@ -1166,6 +1171,28 @@ export default function Product() {
 
             )}
 
+            <ConfirmDialog
+                open={Boolean(deleteConfirmProduct)}
+                title="Delete product?"
+                message={
+                    deleteConfirmProduct
+                        ? `Are you sure you want to delete "${deleteConfirmProduct.name}"? This action cannot be undone.`
+                        : "Are you sure you want to delete this product?"
+                }
+                confirmLabel="Delete product"
+                cancelLabel="Cancel"
+                onConfirm={confirmDelete}
+                onCancel={() => {
+                    if (!deletingId) {
+                        setDeleteConfirmProduct(null);
+                    }
+                }}
+                loading={Boolean(
+                    deleteConfirmProduct &&
+                    deletingId === deleteConfirmProduct.id
+                )}
+                danger
+            />
         </div>
     );
 }
