@@ -4,8 +4,6 @@ import {
   CreditCard,
   ArrowRight,
   Check,
-  UserRoundCheck,
-  KeyRound,
   ShoppingBag,
 } from "lucide-react";
 
@@ -32,7 +30,6 @@ const emptyShippingInfo = {
 const Checkout = () => {
   const [selectedMethod, setSelectedMethod] = useState("card");
   const [selectedShipping, setSelectedShipping] = useState("standard");
-  const [accountEnabled, setAccountEnabled] = useState(true);
   const [checkoutItems, setCheckoutItems] = useState([]);
   const [showPromo, setShowPromo] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -1571,110 +1568,21 @@ const Checkout = () => {
               </div>
             </div>
 
-            {/* STEP 4 — ACCOUNT / GUEST CHECKOUT */}
-            <div className="mt-8 rounded-2xl border border-[#E2E8F0] bg-white p-4 shadow-[0_8px_30px_rgba(30,80,120,0.05)] sm:p-6">
-
-              <div className="flex items-center justify-between gap-4">
-
-                <div className="flex min-w-0 items-center gap-3">
-
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0052FF] to-[#00A3FF] shadow-sm">
-                    <UserRoundCheck
-                      className="h-5 w-5 text-white"
-                      strokeWidth={2}
-                    />
-                  </div>
-
-                  <div className="min-w-0">
-                    <h2 className="text-base font-semibold text-[#1E293B] sm:text-lg">
-                      Create an Account
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-[#64748B] sm:text-sm">
-                      Save your information for faster checkout.
-                    </p>
-                  </div>
-
+            {/* ACCOUNT REQUIREMENT */}
+            <div className="mt-8 rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] p-4 sm:p-6">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#0D59F2]">
+                  <LockKeyhole className="h-5 w-5 text-white" />
                 </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-
-                  <span
-                    className={`text-xs font-bold uppercase tracking-wide ${accountEnabled
-                      ? "text-[#0066FF]"
-                      : "text-[#94A3B8]"
-                      }`}
-                  >
-                    {accountEnabled
-                      ? "ON"
-                      : "OFF"}
-                  </span>
-
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={
-                      accountEnabled
-                    }
-                    aria-label="Create an account"
-                    onClick={() =>
-                      setAccountEnabled(
-                        (prev) =>
-                          !prev
-                      )
-                    }
-                    className={`relative flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition-colors duration-200 hover:cursor-pointer ${accountEnabled
-                      ? "bg-[#0066FF]"
-                      : "bg-[#CBD5E1]"
-                      }`}
-                  >
-                    <span
-                      className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${accountEnabled
-                        ? "translate-x-5"
-                        : "translate-x-0"
-                        }`}
-                    />
-                  </button>
-
-                </div>
-
-              </div>
-
-              <div
-                className={`mt-5 flex items-start gap-3 rounded-xl border p-4 transition-colors duration-200 ${accountEnabled
-                  ? "border-[#BFDBFE] bg-[#EFF6FF]"
-                  : "border-[#BFDBFE] bg-transparent"
-                  }`}
-              >
-
-                <div
-                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${accountEnabled
-                    ? "bg-[#DBEAFE]"
-                    : "bg-transparent"
-                    }`}
-                >
-                  <KeyRound
-                    className="h-4 w-4 text-[#0066FF]"
-                    strokeWidth={2.2}
-                  />
-                </div>
-
                 <div>
-
-                  {accountEnabled ? (
-                    <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
-                      Your login credentials will be sent with your order confirmation email so you can sign in right away.
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-xs leading-relaxed text-[#64748B]">
-                      Your order will be placed as a guest. You can still activate an account later via the link in your confirmation email.
-                    </p>
-                  )}
-
+                  <h2 className="text-base font-semibold text-[#1E293B] sm:text-lg">
+                    Qualified Researcher Account Required
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-[#64748B]">
+                    Your account must have completed the required age confirmation, qualified-researcher declaration, research field, research-use acknowledgement, and terms acceptance before an order can be placed.
+                  </p>
                 </div>
-
               </div>
-
             </div>
 
           </div>
