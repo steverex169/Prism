@@ -106,7 +106,7 @@ const Admin_Login = () => {
           <div className="mt-5 text-center">
 
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#12344D]">
-              Prism Pannel
+              Prisim Panel
             </h1>
 
             <p className="mt-2 text-sm sm:text-base text-[#71879A]">
@@ -160,7 +160,7 @@ const Admin_Login = () => {
             <span>
               {loading
                 ? "Checking..."
-                : "Access Pannel"}
+                : "Access Panel"}
             </span>
 
           </button>
@@ -184,7 +184,7 @@ const Admin_Login = () => {
         {/* Footer */}
 
         <p className="mt-5 text-center text-xs text-[#8AA0B0]">
-          Prism Administration
+          Prisim Administration
         </p>
 
       </div>
