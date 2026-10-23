@@ -25,7 +25,7 @@ const About = () => {
     titleHighlight2: "Standards",
 
     description:
-      "Prism Wellness supplies high-purity peptides for laboratory research, with independent third-party HPLC testing on every batch.",
+      "Prisim Wellness supplies high-purity peptides for laboratory research, with independent third-party HPLC testing on every batch.",
   };
 
   const missionData = {
@@ -396,7 +396,7 @@ const About = () => {
           lg:text-[18px]
         "
             >
-              Prism Wellness makes it simple to source high-purity research materials
+              Prisim Wellness makes it simple to source high-purity research materials
               you can trust. We work only with vetted, GMP-compliant manufacturing
               partners, and every batch is HPLC-tested by an independent laboratory
               for identity and purity before it ships.
