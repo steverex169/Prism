@@ -1,10 +1,13 @@
 import React from "react";
 import { useLocation, useNavigate, Navigate } from "react-router-dom";
 import { Download, LogOut } from "lucide-react";
+import { useNotifications } from "../context/NotificationContext.jsx";
 
 const Topbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { showError } = useNotifications();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
   const tabs = {
     "/admin/orders": "Orders",
@@ -28,8 +31,6 @@ const Topbar = () => {
 
   const handleExport = async () => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-
       const response = await fetch(`${API_BASE_URL}/orders/`, {
         method: "GET",
         credentials: "include",
@@ -119,18 +120,28 @@ const Topbar = () => {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://localhost:8000/user/logout", {
+      const response = await fetch(`${API_BASE_URL}/admin/logout`, {
         method: "POST",
         credentials: "include",
       });
 
+      const result = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error("Logout failed");
+        throw new Error(result.detail || "Logout failed.");
       }
 
+      sessionStorage.setItem(
+        "prismAdminFlash",
+        JSON.stringify({
+          type: "success",
+          message: "Logged out successfully.",
+        })
+      );
       window.location.replace("/pannel/login");
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Admin logout error:", error);
+      showError(error.message || "Unable to log out. Please try again.");
     }
   };
 
