@@ -223,8 +223,8 @@ export default function Product() {
     };
 
 
-    const closeModal = () => {
-        if (saving) {
+    const closeModal = (force = false) => {
+        if (saving && !force) {
             return;
         }
 
@@ -396,7 +396,7 @@ export default function Product() {
             }
 
 
-            closeModal();
+            closeModal(true);
             showSuccess(
                 editingProduct
                     ? "Product updated successfully."
