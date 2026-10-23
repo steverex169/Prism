@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -18,6 +19,8 @@ export const CartProvider = ({ children }) => {
     }
   });
 
+  const [toast, setToast] = useState(null);
+
   useEffect(() => {
     localStorage.setItem("prismCart", JSON.stringify(cartItems));
   }, [cartItems]);
@@ -31,10 +34,7 @@ export const CartProvider = ({ children }) => {
       if (existingProduct) {
         return currentItems.map((item) =>
           item.id === product.id
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-              }
+            ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
@@ -50,19 +50,25 @@ export const CartProvider = ({ children }) => {
   };
 
   const removeFromCart = (id) => {
+    const product = cartItems.find((item) => item.id === id);
+
+    if (!product) return;
+
     setCartItems((currentItems) =>
       currentItems.filter((item) => item.id !== id)
     );
+
+    setToast({
+      type: "success",
+      message: `${product.name || "Item"} removed from cart successfully.`,
+    });
   };
 
   const increaseQuantity = (id) => {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.id === id
-          ? {
-              ...item,
-              quantity: item.quantity + 1,
-            }
+          ? { ...item, quantity: item.quantity + 1 }
           : item
       )
     );
@@ -73,10 +79,7 @@ export const CartProvider = ({ children }) => {
       currentItems
         .map((item) =>
           item.id === id
-            ? {
-                ...item,
-                quantity: item.quantity - 1,
-              }
+            ? { ...item, quantity: item.quantity - 1 }
             : item
         )
         .filter((item) => item.quantity > 0)
@@ -87,20 +90,23 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
   };
 
-  const cartCount = useMemo(() => {
-    return cartItems.reduce(
-      (total, item) => total + item.quantity,
-      0
-    );
-  }, [cartItems]);
+  const cartCount = useMemo(
+    () =>
+      cartItems.reduce(
+        (total, item) => total + item.quantity,
+        0
+      ),
+    [cartItems]
+  );
 
-  const cartTotal = useMemo(() => {
-    return cartItems.reduce(
-      (total, item) =>
-        total + Number(item.price) * item.quantity,
-      0
-    );
-  }, [cartItems]);
+  const cartTotal = useMemo(
+    () =>
+      cartItems.reduce(
+        (total, item) => total + Number(item.price) * item.quantity,
+        0
+      ),
+    [cartItems]
+  );
 
   return (
     <CartContext.Provider
@@ -113,6 +119,8 @@ export const CartProvider = ({ children }) => {
         increaseQuantity,
         decreaseQuantity,
         clearCart,
+        toast,
+        setToast,
       }}
     >
       {children}
@@ -124,9 +132,7 @@ export const useCart = () => {
   const context = useContext(CartContext);
 
   if (!context) {
-    throw new Error(
-      "useCart must be used inside CartProvider"
-    );
+    throw new Error("useCart must be used inside CartProvider");
   }
 
   return context;

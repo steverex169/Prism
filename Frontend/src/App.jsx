@@ -166,7 +166,7 @@ const App = () => {
         ========================= */}
 
         <Route
-          path="/pannel/login"
+          path="/panel/login"
           element={<AdminLogin />}
         />
 

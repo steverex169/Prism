@@ -187,9 +187,8 @@ const Footer = () => {
           <div>
             <div className="mb-5 inline-flex flex-col">
               <span className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
-                Prisim <span className="text-[#0ea6d8]">Wellness</span>
+                Prisim Wellness
               </span>
-              <span className="mt-1 h-[3px] w-12 rounded-full bg-[#0ea6d8]" />
             </div>
 
             <h3 className="text-[16px] font-bold text-white sm:text-[17px] lg:text-[18px]">

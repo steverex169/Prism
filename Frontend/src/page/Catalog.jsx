@@ -10,12 +10,43 @@ import {
 } from "lucide-react";
 
 import { useCart } from "../context/CartContext";
+import Toast from "../component/Toast.jsx";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 const Catalog = () => {
-  const { addToCart } = useCart();
+  const { addToCart, toast, setToast } = useCart();
+
+  const handleAddToCart = async (event, product) => {
+    event.stopPropagation();
+
+    try {
+      await addToCart({
+        ...product,
+        title: product.name,
+        price: Number(product.price),
+        image: getImageUrl(product.image),
+      });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
+      setToast({
+        type: "success",
+        message: `${product.name} added to cart successfully.`,
+      });
+    } catch (error) {
+      console.error("Add to cart failed:", error);
+
+      setToast({
+        type: "error",
+        message: error?.message || "Failed to add item to cart.",
+      });
+    }
+  };
 
   const [authLoading, setAuthLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -321,7 +352,7 @@ const Catalog = () => {
               typeof item === "string"
                 ? item
                 : item.msg ||
-                  "Invalid information."
+                "Invalid information."
             )
             .join(" ");
         } else if (
@@ -337,7 +368,7 @@ const Catalog = () => {
     } catch (error) {
       setComplianceError(
         error.message ||
-          "Unable to save your research qualification."
+        "Unable to save your research qualification."
       );
     } finally {
       setComplianceSaving(false);
@@ -568,6 +599,11 @@ const Catalog = () => {
   if (!user) {
     return (
       <section className="flex min-h-[420px] items-center justify-center bg-white px-5">
+        <Toast
+          type={toast?.type}
+          message={toast?.message}
+          onClose={() => setToast(null)}
+        />
         <div className="w-full max-w-[520px] text-center">
           <h1 className="text-[30px] font-bold tracking-[-0.03em] text-[#171728]">
             Account required
@@ -775,6 +811,11 @@ const Catalog = () => {
 
   return (
     <section className="w-full bg-white font-sans">
+      <Toast
+        type={toast?.type}
+        message={toast?.message}
+        onClose={() => setToast(null)}
+      />
       <div
         className="
           mx-auto
@@ -862,10 +903,9 @@ const Catalog = () => {
                   strokeWidth={1.6}
                   className={`
                     transition-transform
-                    ${
-                      availabilityOpen
-                        ? "rotate-180"
-                        : ""
+                    ${availabilityOpen
+                      ? "rotate-180"
+                      : ""
                     }
                   `}
                 />
@@ -918,10 +958,9 @@ const Catalog = () => {
                         justify-center
                         rounded-[3px]
                         border
-                        ${
-                          availability.inStock
-                            ? "border-[#16385f] bg-[#16385f] text-white"
-                            : "border-[#aaa] bg-white"
+                        ${availability.inStock
+                          ? "border-[#16385f] bg-[#16385f] text-white"
+                          : "border-[#aaa] bg-white"
                         }
                       `}
                     >
@@ -969,10 +1008,9 @@ const Catalog = () => {
                         justify-center
                         rounded-[3px]
                         border
-                        ${
-                          availability.outOfStock
-                            ? "border-[#16385f] bg-[#16385f] text-white"
-                            : "border-[#aaa] bg-white"
+                        ${availability.outOfStock
+                          ? "border-[#16385f] bg-[#16385f] text-white"
+                          : "border-[#aaa] bg-white"
                         }
                       `}
                     >
@@ -1026,10 +1064,9 @@ const Catalog = () => {
                   strokeWidth={1.6}
                   className={`
                     transition-transform
-                    ${
-                      priceOpen
-                        ? "rotate-180"
-                        : ""
+                    ${priceOpen
+                      ? "rotate-180"
+                      : ""
                     }
                   `}
                 />
@@ -1190,10 +1227,9 @@ const Catalog = () => {
                   strokeWidth={1.6}
                   className={`
                     transition-transform
-                    ${
-                      sortOpen
-                        ? "rotate-180"
-                        : ""
+                    ${sortOpen
+                      ? "rotate-180"
+                      : ""
                     }
                   `}
                 />
@@ -1239,22 +1275,21 @@ const Catalog = () => {
                           text-left
                           text-[14px]
                           transition-colors
-                          ${
-                            sortType ===
+                          ${sortType ===
                             value
-                              ? "bg-[#f0f0f2] text-[#40404e]"
-                              : "text-[#555563] hover:bg-[#f7f7f8]"
+                            ? "bg-[#f0f0f2] text-[#40404e]"
+                            : "text-[#555563] hover:bg-[#f7f7f8]"
                           }
                         `}
                       >
                         <span className="w-[15px]">
                           {sortType ===
                             value && (
-                            <Check
-                              size={15}
-                              strokeWidth={2}
-                            />
-                          )}
+                              <Check
+                                size={15}
+                                strokeWidth={2}
+                              />
+                            )}
                         </span>
 
                         {label}
@@ -1281,10 +1316,9 @@ const Catalog = () => {
                 items-center
                 justify-center
                 rounded-[4px]
-                ${
-                  viewMode === "normal"
-                    ? "bg-[#f1f1f3] text-[#31313c]"
-                    : "text-[#9c9ca7]"
+                ${viewMode === "normal"
+                  ? "bg-[#f1f1f3] text-[#31313c]"
+                  : "text-[#9c9ca7]"
                 }
               `}
             >
@@ -1310,10 +1344,9 @@ const Catalog = () => {
                 items-center
                 justify-center
                 rounded-[4px]
-                ${
-                  viewMode === "compact"
-                    ? "bg-[#f1f1f3] text-[#31313c]"
-                    : "text-[#9c9ca7]"
+                ${viewMode === "compact"
+                  ? "bg-[#f1f1f3] text-[#31313c]"
+                  : "text-[#9c9ca7]"
                 }
               `}
             >
@@ -1334,16 +1367,15 @@ const Catalog = () => {
             mt-7
             grid
             gap-y-10
-            ${
-              viewMode === "normal"
-                ? `
+            ${viewMode === "normal"
+              ? `
                     grid-cols-1
                     gap-x-5
                     sm:grid-cols-2
                     lg:grid-cols-3
                     xl:grid-cols-4
                   `
-                : `
+              : `
                     grid-cols-2
                     gap-x-4
                     sm:grid-cols-3
@@ -1374,10 +1406,9 @@ const Catalog = () => {
                     duration-300
                     hover:-translate-y-[5px]
                     hover:shadow-[0_14px_35px_rgba(5,22,39,0.16)]
-                    ${
-                      viewMode === "compact"
-                        ? "max-w-[180px]"
-                        : "w-full"
+                    ${viewMode === "compact"
+                      ? "max-w-[180px]"
+                      : "w-full"
                     }
                   `}
                 >
@@ -1450,25 +1481,7 @@ const Catalog = () => {
                         disabled={
                           !product.available
                         }
-                        onClick={(e) => {
-                          e.stopPropagation();
-
-                          if (
-                            product.available
-                          ) {
-                            addToCart({
-                              ...product,
-                              title: product.name,
-                              price: Number(
-                                product.price
-                              ),
-                              image:
-                                getImageUrl(
-                                  product.image
-                                ),
-                            });
-                          }
-                        }}
+                        onClick={(e) => handleAddToCart(e, product)}
                         className={`
                           flex
                           h-[42px]
@@ -1478,14 +1491,13 @@ const Catalog = () => {
                           text-white
                           transition-all
                           duration-300
-                          ${
-                            product.available
-                              ? `
+                          ${product.available
+                            ? `
                                   cursor-pointer
                                   bg-[#17365c]
                                   group-hover:bg-[#20aaf2]
                                 `
-                              : `
+                            : `
                                   cursor-not-allowed
                                   bg-[#9da4ad]
                                   opacity-80
@@ -1517,9 +1529,8 @@ const Catalog = () => {
                             font-semibold
                             transition-all
                             duration-300
-                            ${
-                              product.available
-                                ? `
+                            ${product.available
+                              ? `
                                     max-w-0
                                     pr-0
                                     opacity-0
@@ -1527,7 +1538,7 @@ const Catalog = () => {
                                     group-hover:pr-4
                                     group-hover:opacity-100
                                   `
-                                : `
+                              : `
                                     max-w-[120px]
                                     pr-4
                                     opacity-100
@@ -1551,10 +1562,9 @@ const Catalog = () => {
                       font-normal
                       leading-[1.35]
                       text-[#4e4e5c]
-                      ${
-                        viewMode === "compact"
-                          ? "text-[13px]"
-                          : "text-[15px] sm:text-[16px]"
+                      ${viewMode === "compact"
+                        ? "text-[13px]"
+                        : "text-[15px] sm:text-[16px]"
                       }
                     `}
                   >
@@ -1568,10 +1578,9 @@ const Catalog = () => {
                       mt-1
                       font-bold
                       text-[#173658]
-                      ${
-                        viewMode === "compact"
-                          ? "text-[12px]"
-                          : "text-[14px] sm:text-[15px]"
+                      ${viewMode === "compact"
+                        ? "text-[12px]"
+                        : "text-[14px] sm:text-[15px]"
                       }
                     `}
                   >
