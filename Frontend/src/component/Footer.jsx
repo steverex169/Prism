@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -87,11 +87,25 @@ const Footer = () => {
       } else {
         setMessage(
           error.message ||
-            "Something went wrong. Please try again."
+          "Something went wrong. Please try again."
         );
       }
     } finally {
       setLoading(false);
+    }
+  };
+  const location = useLocation();
+
+  const handleSamePageNavigation = (to) => {
+    const targetPath =
+      typeof to === "string" ? to.split(/[?#]/)[0] : to.pathname;
+
+    if (targetPath === location.pathname) {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
     }
   };
 
@@ -174,121 +188,132 @@ const Footer = () => {
             <div className="mt-5 flex flex-col gap-4">
               <Link
                 to="/contact"
+                onClick={() => handleSamePageNavigation("/contact")}
                 className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
               >
-                Contact Us
-              </Link>
+              Contact Us
+            </Link>
 
-              <Link
-                to="/about"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                About Us
-              </Link>
-            </div>
-          </div>
-
-          {/* Useful Links */}
-          <div>
-            <h3 className="text-[16px] font-bold text-white sm:text-[17px] lg:text-[18px]">
-              Useful Links
-            </h3>
-
-            <div className="mt-5 flex flex-col gap-4">
-              <a
-                href="/#faq"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                FAQs
-              </a>
-
-              <Link
-                to="/terms"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Terms & Conditions
-              </Link>
-
-              <Link
-                to="/privacy"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Privacy Policy
-              </Link>
-
-              <Link
-                to="/refund"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Refund & Return Policy
-              </Link>
-
-              <Link
-                to="/shipping"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Shipping & Delivery Policy
-              </Link>
-
-              <Link
-                to="/quality"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Quality Assurance
-              </Link>
-
-              <Link
-                to="/third"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Third-Party Testing
-              </Link>
-
-              <Link
-                to="/certificate"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Certificates of Analysis
-              </Link>
-
-              <Link
-                to="/manufacturing"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Manufacturing Standards
-              </Link>
-
-              <Link
-                to="/compliance"
-                className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
-              >
-                Compliance Statement
-              </Link>
-            </div>
-          </div>
-
-          {/* Subscribe */}
-          <div>
-            <h3 className="text-[16px] font-bold text-white sm:text-[17px] lg:text-[18px]">
-              Subscribe to our email
-            </h3>
-
-            <form
-              onSubmit={handleSubscribe}
-              className="mt-5 flex w-full max-w-[320px]"
+            <Link
+              to="/about"
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
             >
-              <input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setMessage("");
-                }}
-                autoComplete="email"
-                required
-                disabled={loading}
-                className="
+              About Us
+            </Link>
+          </div>
+        </div>
+
+        {/* Useful Links */}
+        <div>
+          <h3 className="text-[16px] font-bold text-white sm:text-[17px] lg:text-[18px]">
+            Useful Links
+          </h3>
+
+          <div className="mt-5 flex flex-col gap-4">
+            <a
+              href="/#faq"
+              onClick={() => handleSamePageNavigation("/#faq")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              FAQs
+            </a>
+
+            <Link
+              to="/terms"
+              onClick={() => handleSamePageNavigation("/terms")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Terms & Conditions
+            </Link>
+
+            <Link
+              to="/privacy"
+              onClick={() => handleSamePageNavigation("/privacy")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Privacy Policy
+            </Link>
+
+            <Link
+              to="/refund"
+              onClick={() => handleSamePageNavigation("/refund")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Refund & Return Policy
+            </Link>
+
+            <Link
+              to="/shipping"
+              onClick={() => handleSamePageNavigation("/shipping")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Shipping & Delivery Policy
+            </Link>
+
+            <Link
+              to="/quality"
+              onClick={() => handleSamePageNavigation("/quality")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Quality Assurance
+            </Link>
+
+            <Link
+              to="/third"
+              onClick={() => handleSamePageNavigation("/third")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Third-Party Testing
+            </Link>
+
+            <Link
+              to="/certificate"
+              onClick={() => handleSamePageNavigation("/certificate")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Certificates of Analysis
+            </Link>
+
+            <Link
+              to="/manufacturing"
+              onClick={() => handleSamePageNavigation("/manufacturing")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Manufacturing Standards
+            </Link>
+
+            <Link
+              to="/compliance"
+              onClick={() => handleSamePageNavigation("/compliance")}
+              className="text-[14px] text-[#9b9d9f] transition-colors duration-200 hover:text-white sm:text-[15px]"
+            >
+              Compliance Statement
+            </Link>
+          </div>
+        </div>
+
+        {/* Subscribe */}
+        <div>
+          <h3 className="text-[16px] font-bold text-white sm:text-[17px] lg:text-[18px]">
+            Subscribe to our email
+          </h3>
+
+          <form
+            onSubmit={handleSubscribe}
+            className="mt-5 flex w-full max-w-[320px]"
+          >
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setMessage("");
+              }}
+              autoComplete="email"
+              required
+              disabled={loading}
+              className="
                   h-[44px]
                   min-w-0
                   flex-1
@@ -305,12 +330,12 @@ const Footer = () => {
                   disabled:opacity-70
                   sm:text-[14px]
                 "
-              />
+            />
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="
+            <button
+              type="submit"
+              disabled={loading}
+              className="
                   h-[44px]
                   shrink-0
                   bg-[#0ea6d8]
@@ -327,30 +352,30 @@ const Footer = () => {
                   sm:px-6
                   sm:text-[14px]
                 "
-              >
-                {loading ? "Saving..." : "Sign Up"}
-              </button>
-            </form>
+            >
+              {loading ? "Saving..." : "Sign Up"}
+            </button>
+          </form>
 
-            {message && (
-              <p className="mt-3 text-[13px] text-[#9b9d9f]">
-                {message}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom Line */}
-        <div className="mt-14 h-px w-full bg-[#304052] sm:mt-16 lg:mt-20" />
-
-        {/* Required Research Use Disclaimer */}
-        <div className="pt-6 text-center">
-          <p className="text-[12px] leading-[1.7] text-[#b3bac2] sm:text-[13px]">
-            For research and laboratory use only. Not for human or animal consumption.
-          </p>
+          {message && (
+            <p className="mt-3 text-[13px] text-[#9b9d9f]">
+              {message}
+            </p>
+          )}
         </div>
       </div>
-    </footer>
+
+      {/* Bottom Line */}
+      <div className="mt-14 h-px w-full bg-[#304052] sm:mt-16 lg:mt-20" />
+
+      {/* Required Research Use Disclaimer */}
+      <div className="pt-6 text-center">
+        <p className="text-[12px] leading-[1.7] text-[#b3bac2] sm:text-[13px]">
+          For research and laboratory use only. Not for human or animal consumption.
+        </p>
+      </div>
+    </div>
+    </footer >
   );
 };
 
