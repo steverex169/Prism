@@ -11,15 +11,38 @@ from fastapi import (
     UploadFile,
     File,
     Form,
+    Request,
 )
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from Database import get_db
 from Model.product_model import ProductModel
+from Endpoint.User_endpoint import get_user_from_request, compliance_complete
 
 
 router = APIRouter(prefix="/products", tags=["Products"])
+
+def require_compliant_researcher(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user = get_user_from_request(request, db)
+    if not compliance_complete(user):
+        raise HTTPException(
+            status_code=403,
+            detail="Complete your age and qualified-researcher compliance confirmations to access products.",
+        )
+    return user
+
+
+def require_admin(request: Request):
+    if request.cookies.get("admin_authenticated") != "true":
+        raise HTTPException(
+            status_code=401,
+            detail="Admin authentication required.",
+        )
+
 
 
 UPLOAD_DIR = "uploads/products"
@@ -96,7 +119,10 @@ def delete_image(image_path: Optional[str]):
 
 
 @router.get("/", response_model=List[ProductResponse])
-def get_products(db: Session = Depends(get_db)):
+def get_products(
+    db: Session = Depends(get_db),
+    researcher=Depends(require_compliant_researcher),
+):
     products = (
         db.query(ProductModel)
         .order_by(ProductModel.id.asc())
@@ -109,7 +135,8 @@ def get_products(db: Session = Depends(get_db)):
 @router.get("/search", response_model=List[ProductResponse])
 def get_product_by_name(
     name: str = Query(..., min_length=1),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    researcher=Depends(require_compliant_researcher),
 ):
     products = (
         db.query(ProductModel)
@@ -124,7 +151,8 @@ def get_product_by_name(
 @router.get("/{product_id}", response_model=ProductResponse)
 def get_product(
     product_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    researcher=Depends(require_compliant_researcher),
 ):
     product = (
         db.query(ProductModel)
@@ -163,7 +191,8 @@ async def create_product(
 
     image: Optional[UploadFile] = File(None),
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
 ):
     existing_product = (
         db.query(ProductModel)
@@ -240,7 +269,8 @@ async def update_product(
 
     image: Optional[UploadFile] = File(None),
 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
 ):
     product = (
         db.query(ProductModel)
@@ -336,7 +366,8 @@ async def update_product(
 @router.delete("/{product_id}")
 def delete_product(
     product_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
 ):
     product = (
         db.query(ProductModel)
