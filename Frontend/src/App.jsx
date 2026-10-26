@@ -214,7 +214,79 @@ const ProtectedAdmin = () => {
 };
 
 
+
+const AGE_GATE_STORAGE_KEY = "prism_age_gate_confirmed";
+const AGE_GATE_REQUIRED_TEXT =
+  "All products are sold for Research Use Only. To continue you confirm that you are a qualified research professional aged 21 or older.";
+
+const AgeGate = ({ onConfirm }) => {
+  const [confirmed, setConfirmed] = useState(false);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="age-gate-title"
+      className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center overflow-y-auto bg-slate-950/90 px-4 py-8"
+    >
+      <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-9">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
+          Age Gate + Login Gate
+        </p>
+        <h1
+          id="age-gate-title"
+          className="mt-3 text-2xl font-semibold text-slate-900 sm:text-3xl"
+        >
+          Research Professional Verification
+        </h1>
+        <p className="mt-4 text-sm leading-6 text-slate-600">
+          Access to this website is restricted to qualified research professionals aged 21 or older.
+        </p>
+
+        <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-800">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(event) => setConfirmed(event.target.checked)}
+            className="mt-1 h-4 w-4 shrink-0 accent-blue-700"
+          />
+          <span>{AGE_GATE_REQUIRED_TEXT}</span>
+        </label>
+
+        <button
+          type="button"
+          disabled={!confirmed}
+          onClick={onConfirm}
+          className="mt-5 w-full rounded-lg bg-blue-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          I Confirm and Continue
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
+  const [ageGateConfirmed, setAgeGateConfirmed] = useState(() => {
+    try {
+      return sessionStorage.getItem(AGE_GATE_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const confirmAgeGate = () => {
+    try {
+      sessionStorage.setItem(AGE_GATE_STORAGE_KEY, "true");
+    } catch {
+      // The gate still unlocks for this rendered session if storage is unavailable.
+    }
+    setAgeGateConfirmed(true);
+  };
+
+  if (!ageGateConfirmed) {
+    return <AgeGate onConfirm={confirmAgeGate} />;
+  }
 
   return (
     <>
