@@ -105,7 +105,8 @@ def verify_password(
 
 def create_access_token(
     user_id: int,
-    email: str
+    email: str,
+    session_version: int = 0,
 ):
     now = datetime.now(timezone.utc)
 
@@ -119,6 +120,7 @@ def create_access_token(
         "iat": now,
         "exp": expires,
         "type": "access",
+        "version": session_version,
     }
 
     return jwt.encode(

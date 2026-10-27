@@ -23,6 +23,8 @@ from pydantic import (
 
 from Database import get_db
 from Model import User_model
+from Services.account_service import cleanup_unverified, issue_challenge, consume_challenge
+from Services.email_service import queue_email, first_name, site_url, utcnow
 
 from security.auth import (
     validate_password,
@@ -113,6 +115,12 @@ def get_user_from_request(
             detail="Invalid session."
         )
 
+    if payload.get("version", 0) != user.session_version:
+        raise HTTPException(401, "Your session has expired. Please sign in again.")
+
+    if not user.email_verified:
+        raise HTTPException(403, detail={"code": "email_unverified", "message": "Verify your email before signing in."})
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -137,6 +145,7 @@ def user_payload(user):
         "id": user.id,
         "full_name": user.full_name,
         "email": user.email,
+        "email_verified": bool(user.email_verified),
         "age_verified": bool(user.age_verified),
         "qualified_researcher": bool(user.qualified_researcher),
         "research_field": user.research_field,
@@ -297,6 +306,7 @@ def signup(
     response: Response,
     db: Session = Depends(get_db)
 ):
+    cleanup_unverified(db)
     email = data.email.lower().strip()
 
     existing_user = (
@@ -320,7 +330,9 @@ def signup(
             full_name=data.full_name.strip(),
             email=email,
             password_hash=hashed_password,
-            is_active=True,
+            is_active=False,
+            email_verified=False,
+            verification_started_at=utcnow(),
             age_verified=data.age_verified,
             qualified_researcher=data.qualified_researcher,
             research_field=data.research_field.strip(),
@@ -332,8 +344,10 @@ def signup(
         )
 
         db.add(new_user)
-        db.commit()
+        db.flush()
         db.refresh(new_user)
+        issue_challenge(db, new_user)
+        db.commit()
 
     except IntegrityError:
         db.rollback()
@@ -351,19 +365,10 @@ def signup(
             detail="Unable to create account."
         )
 
-    access_token = create_access_token(
-        user_id=new_user.id,
-        email=new_user.email
-    )
-
-    set_auth_cookie(
-        response,
-        access_token
-    )
-
     return {
-        "message": "Account created successfully",
-        "user": user_payload(new_user)
+        "message": "Check your email to verify your account. Unverified accounts expire after 48 hours.",
+        "verification_required": True,
+        "email": new_user.email,
     }
 
 
@@ -377,6 +382,7 @@ def login_user(
     response: Response,
     db: Session = Depends(get_db)
 ):
+    cleanup_unverified(db)
     email = data.email.lower().strip()
 
     user = (
@@ -405,6 +411,9 @@ def login_user(
             detail="Invalid email or password."
         )
 
+    if not user.email_verified:
+        raise HTTPException(403, detail={"code": "email_unverified", "message": "Verify your email before signing in."})
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -413,7 +422,8 @@ def login_user(
 
     access_token = create_access_token(
         user_id=user.id,
-        email=user.email
+        email=user.email,
+        session_version=user.session_version,
     )
 
     set_auth_cookie(

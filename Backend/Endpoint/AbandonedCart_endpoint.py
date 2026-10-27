@@ -1,12 +1,16 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field, field_validator
+import math
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from Database import get_db
 from Model.abandoned_cart_model import AbandonedCartModel
+from Endpoint.Admin_endpoint import admin_status
+from Endpoint.User_endpoint import get_user_from_request
+from datetime import datetime
 
 
 router = APIRouter(
@@ -21,8 +25,23 @@ class AbandonedCartCreate(BaseModel):
     customer_phone: str
     research_field: Optional[str] = None
     cart_items: List[dict]
-    items: int
-    total: int
+    items: int = Field(ge=0)
+    total: int = Field(ge=0)
+
+    @field_validator("cart_items")
+    @classmethod
+    def validate_items(cls, items):
+        if len(items) > 100:
+            raise ValueError("Too many cart items.")
+        for item in items:
+            try:
+                price = float(item.get("price", 0))
+                quantity = int(item.get("quantity", 1))
+            except (TypeError, ValueError, OverflowError):
+                raise ValueError("Invalid cart item price or quantity.")
+            if not math.isfinite(price) or price < 0 or not 1 <= quantity <= 10000:
+                raise ValueError("Invalid cart item price or quantity.")
+        return items
 
 
 class AbandonedCartResponse(BaseModel):
@@ -72,7 +91,7 @@ def format_response(cart):
     }
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(admin_status)])
 def get_abandoned_carts(
     db: Session = Depends(get_db)
 ):
@@ -91,9 +110,12 @@ def get_abandoned_carts(
 @router.post("/")
 def create_or_update_abandoned_cart(
     cart_data: AbandonedCartCreate,
+    request: Request,
     db: Session = Depends(get_db)
 ):
-    email = cart_data.customer_email.strip().lower()
+    user = get_user_from_request(request, db)
+    email = user.email.strip().lower()
+    cart_data.customer_name = user.full_name
 
     existing = (
         db.query(AbandonedCartModel)
@@ -116,6 +138,7 @@ def create_or_update_abandoned_cart(
         existing.cart_items = cart_json
         existing.items = cart_data.items
         existing.total = cart_data.total
+        existing.last_active = datetime.utcnow()
 
         db.commit()
         db.refresh(existing)
@@ -140,7 +163,7 @@ def create_or_update_abandoned_cart(
     return format_response(new_cart)
 
 
-@router.put("/{cart_id}/followed-up")
+@router.put("/{cart_id}/followed-up", dependencies=[Depends(admin_status)])
 def mark_followed_up(
     cart_id: int,
     db: Session = Depends(get_db)
@@ -165,7 +188,7 @@ def mark_followed_up(
     return format_response(cart)
 
 
-@router.delete("/{cart_id}")
+@router.delete("/{cart_id}", dependencies=[Depends(admin_status)])
 def delete_abandoned_cart(
     cart_id: int,
     db: Session = Depends(get_db)

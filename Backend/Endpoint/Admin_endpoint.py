@@ -1,4 +1,8 @@
 import os
+import hmac
+import jwt
+from datetime import datetime, timedelta, timezone
+from security.auth import JWT_SECRET_KEY, JWT_ALGORITHM
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
@@ -26,7 +30,7 @@ def admin_login(
             detail="Admin password is not configured"
         )
 
-    if login_data.password != admin_password:
+    if not hmac.compare_digest(login_data.password, admin_password):
         raise HTTPException(
             status_code=401,
             detail="Invalid password"
@@ -34,9 +38,9 @@ def admin_login(
 
     response.set_cookie(
         key="admin_authenticated",
-        value="true",
+        value=jwt.encode({"type": "admin", "exp": datetime.now(timezone.utc) + timedelta(hours=8)}, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM),
         httponly=True,
-        secure=True,
+        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         max_age=60 * 60 * 8
     )
@@ -52,7 +56,13 @@ def admin_status(request: Request):
         "admin_authenticated"
     )
 
-    if admin_authenticated != "true":
+    try:
+        payload = jwt.decode(admin_authenticated or "", JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        authenticated = payload.get("type") == "admin"
+    except jwt.InvalidTokenError:
+        authenticated = False
+
+    if not authenticated:
         raise HTTPException(
             status_code=401,
             detail="Admin authentication required"

@@ -4,6 +4,8 @@ from sqlalchemy import (
     String,
     DateTime,
     text,
+    Numeric,
+    Text,
 )
 
 from Database import base
@@ -41,7 +43,7 @@ class OrderModel(base):
     )
 
     total = Column(
-        Integer,
+        Numeric(12, 2),
         nullable=False
     )
 
@@ -60,6 +62,11 @@ class OrderModel(base):
         nullable=False,
         default="pending"
     )
+
+    email_details = Column(Text, nullable=True)
+    user_id = Column(Integer, nullable=True, index=True)
+    refunded_total = Column(Numeric(12, 2), nullable=False, default=0, server_default=text("0"))
+    delivered_at = Column(DateTime, nullable=True)
 
     date = Column(
         DateTime(timezone=True),

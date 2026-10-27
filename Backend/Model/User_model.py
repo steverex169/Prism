@@ -39,9 +39,14 @@ class User(base):
 
     is_active = Column(
         Boolean,
-        default=True,
+        default=False,
         nullable=False
     )
+
+    email_verified = Column(Boolean, default=False, server_default=text("0"), nullable=False)
+    verified_at = Column(DateTime, nullable=True)
+    verification_started_at = Column(DateTime, nullable=True)
+    session_version = Column(Integer, default=0, server_default=text("0"), nullable=False)
 
     # Compliance fields.
     # Server defaults keep existing rows valid when these columns are added.

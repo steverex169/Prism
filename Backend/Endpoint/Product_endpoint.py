@@ -13,12 +13,16 @@ from fastapi import (
     Form,
     Request,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from Database import get_db
 from Model.product_model import ProductModel
 from Endpoint.User_endpoint import get_user_from_request, compliance_complete
+from Endpoint.Admin_endpoint import admin_status
+from Model.notification_model import StockSubscription
+from Model.User_model import User
+from Services.email_service import queue_email, first_name, site_url, money, utcnow
 
 
 router = APIRouter(prefix="/products", tags=["Products"])
@@ -27,6 +31,11 @@ def require_compliant_researcher(
     request: Request,
     db: Session = Depends(get_db),
 ):
+    if request.cookies.get("admin_authenticated"):
+        try:
+            return admin_status(request)
+        except HTTPException:
+            pass
     user = get_user_from_request(request, db)
     if not compliance_complete(user):
         raise HTTPException(
@@ -37,11 +46,7 @@ def require_compliant_researcher(
 
 
 def require_admin(request: Request):
-    if request.cookies.get("admin_authenticated") != "true":
-        raise HTTPException(
-            status_code=401,
-            detail="Admin authentication required.",
-        )
+    return admin_status(request)
 
 
 
@@ -50,6 +55,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 class ProductResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
     price: int
@@ -72,8 +78,6 @@ class ProductResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
 
 
 ALLOWED_IMAGE_TYPES = {
@@ -336,6 +340,7 @@ async def update_product(
     if storage_conditions is not None:
         product.storage_conditions = storage_conditions
 
+    restocked = available is True and not product.available
     if available is not None:
         product.available = available
 
@@ -355,7 +360,18 @@ async def update_product(
 
         product.image = new_image_path
 
-    product.updated_at = datetime.utcnow()
+    product.updated_at = utcnow()
+
+    if restocked:
+        for alert in db.query(StockSubscription).filter_by(product_id=product.id, notified=False).all():
+            user = db.query(User).filter_by(id=alert.user_id, email_verified=True, is_active=True).first()
+            if user:
+                queue_email(db, "BackInStock", user.email, {
+                    "firstName": first_name(user.full_name), "productName": product.name,
+                    "productPrice": money(product.price), "productImageUrl": site_url(product.image or ""),
+                    "productUrl": site_url("/catalog"),
+                }, f"stock:{alert.id}:{product.updated_at.isoformat()}")
+                alert.notified = True
 
     db.commit()
     db.refresh(product)

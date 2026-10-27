@@ -15,6 +15,10 @@ from pydantic import BaseModel, EmailStr
 
 from Model import Email_model
 from Database import get_db
+import jwt
+from datetime import datetime, timedelta, timezone
+from security.auth import JWT_SECRET_KEY, JWT_ALGORITHM
+from Services.email_service import queue_email, site_url
 
 
 router = APIRouter(
@@ -58,6 +62,13 @@ def save_email(
         )
 
         db.add(new_email)
+        db.flush()
+        token = jwt.encode({"type": "unsubscribe", "email": normalized_email,
+                            "exp": datetime.now(timezone.utc) + timedelta(days=3650)},
+                           JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+        queue_email(db, "SubscriptionConfirmed", normalized_email, {
+            "firstName": "subscriber", "unsubscribeUrl": site_url("/unsubscribe?token=" + token),
+        }, f"newsletter:{new_email.id}:{token[-20:]}")
         db.commit()
         db.refresh(new_email)
 
@@ -82,3 +93,20 @@ def save_email(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to save email.",
         )
+
+
+class UnsubscribeRequest(BaseModel):
+    token: str
+
+
+@router.post("/unsubscribe")
+def unsubscribe(data: UnsubscribeRequest, db: Session = Depends(get_db)):
+    try:
+        claims = jwt.decode(data.token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        if claims.get("type") != "unsubscribe":
+            raise ValueError()
+    except (jwt.InvalidTokenError, ValueError):
+        raise HTTPException(400, "Invalid unsubscribe link.")
+    db.query(Email_model.Email).filter_by(email_address=claims["email"]).delete()
+    db.commit()
+    return {"message": "You have been unsubscribed."}

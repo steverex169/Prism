@@ -1,0 +1,606 @@
+import React, { useEffect, useState } from "react";
+import { useNotifications } from "../context/NotificationContext";
+import ConfirmDialog from "../component/ConfirmDialog";
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
+const HeroPage = () => {
+    const { showSuccess, showError, showDelete } = useNotifications();
+    const [deleteConfirmHero, setDeleteConfirmHero] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
+    const [heroes, setHeroes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [editingHero, setEditingHero] = useState(null);
+
+    const [showModal, setShowModal] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [sections, setSections] = useState([]);
+    const [imageError, setImageError] = useState("");
+
+    const [formData, setFormData] = useState({
+        section_name: "",
+        alt_text: "",
+        image: null,
+    });
+
+    const [preview, setPreview] = useState(null);
+
+    const fetchSections = async () => {
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/hero/sections`
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch hero sections");
+            }
+
+            const result = await response.json();
+
+            setSections(result.data || []);
+        } catch (error) {
+            console.error("Error fetching hero sections:", error);
+        }
+    };
+
+    // --------------------------------
+    // FETCH HERO IMAGES
+    // --------------------------------
+
+    const fetchHeroImages = async () => {
+        try {
+            setLoading(true);
+
+            const response = await fetch(`${API_BASE_URL}/hero/`);
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch hero images");
+            }
+
+            const result = await response.json();
+
+            setHeroes(result.data || []);
+        } catch (error) {
+            console.error("Error fetching hero images:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => { fetchHeroImages(); fetchSections(); }, 0);
+        return () => window.clearTimeout(timer);
+    }, []);
+
+    // --------------------------------
+    // OPEN MODAL
+    // --------------------------------
+
+    const openModal = () => {
+        setEditingHero(null);
+
+        setFormData({
+            section_name: "",
+            alt_text: "",
+            image: null,
+        });
+
+        setPreview(null);
+        setShowModal(true);
+        setImageError("");
+    };
+
+    // Edit modal for existing hero image
+
+    const openEditModal = (hero) => {
+        setEditingHero(hero);
+
+        setFormData({
+            section_name: hero.section_name || "",
+            alt_text: hero.alt_text || "",
+            image: null,
+        });
+
+        setPreview(
+            hero.image_url
+                ? `${API_BASE_URL}/${String(hero.image_url || "").replace(/^\/+/, "")}`
+                : null
+        );
+
+        setShowModal(true);
+        setImageError("");
+    };
+
+    // --------------------------------
+    // CLOSE MODAL
+    // --------------------------------
+
+    const closeModal = () => {
+        if (saving) return;
+
+        setShowModal(false);
+        setEditingHero(null);
+
+        setFormData({
+            section_name: "",
+            alt_text: "",
+            image: null,
+        });
+
+        setPreview(null);
+        setImageError("");
+    };
+
+    // --------------------------------
+    // HANDLE INPUT
+    // --------------------------------
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    // --------------------------------
+    // HANDLE IMAGE
+    // --------------------------------
+
+    const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
+
+        if (!file) return;
+
+        // Reset previous validation message
+        setImageError("");
+
+        // Check file type
+        if (!file.type.startsWith("image/")) {
+            setImageError("Please select a valid image file.");
+            e.target.value = "";
+            return;
+        }
+
+        // Check file size
+        const maxSize = 100 * 1024; // 100 KB
+
+        if (file.size > maxSize) {
+            setImageError("Image must be 100 KB or smaller.");
+            e.target.value = "";
+            return;
+        }
+
+        // Check dimensions
+        const image = new Image();
+        const imageUrl = URL.createObjectURL(file);
+
+        image.onload = () => {
+            const { width, height } = image;
+
+            // Exact 16:9 check
+            // Approximately 16:9 check
+            const actualRatio = width / height;
+            const targetRatio = 16 / 9;
+            const tolerance = 0.01;
+            if (Math.abs(actualRatio - targetRatio) > tolerance) {
+                setImageError(
+                    `Image must have approximately a 16:9 ratio. Selected image is ${width}×${height}.`
+                );
+
+                URL.revokeObjectURL(imageUrl);
+                e.target.value = "";
+                return;
+            }
+
+            // Valid image
+            setFormData((prev) => ({
+                ...prev,
+                image: file,
+            }));
+
+            setPreview(imageUrl);
+        };
+
+        image.onerror = () => {
+            setImageError("Unable to read this image.");
+            URL.revokeObjectURL(imageUrl);
+            e.target.value = "";
+        };
+
+        image.src = imageUrl;
+    };
+
+    // --------------------------------
+    // CREATE HERO IMAGE
+    // --------------------------------
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!formData.section_name) {
+            showError("Please select a section.");
+            return;
+        }
+
+        if (!editingHero && !formData.image) {
+            showError("Please select an image.");
+            return;
+        }
+
+        try {
+            setSaving(true);
+
+            const data = new FormData();
+
+            data.append("section_name", formData.section_name);
+            data.append("alt_text", formData.alt_text);
+
+            // Only send image if user selected a new one
+            if (formData.image) {
+                data.append("image", formData.image);
+            }
+
+            const url = editingHero
+                ? `${API_BASE_URL}/hero/${editingHero.id}`
+                : `${API_BASE_URL}/hero/`;
+
+            const response = await fetch(url, {
+                method: editingHero ? "PUT" : "POST",
+                body: data,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.detail ||
+                    `Failed to ${editingHero ? "update" : "create"} hero image`
+                );
+            }
+
+            closeModal();
+            await fetchHeroImages();
+            showSuccess(editingHero ? "Hero image updated successfully." : "Hero image created successfully.");
+        } catch (error) {
+            console.error(
+                `Error ${editingHero ? "updating" : "creating"} hero image:`,
+                error
+            );
+            showError(error.message || `Failed to ${editingHero ? "update" : "create"} hero image.`);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDelete = (hero) => {
+        setDeleteConfirmHero(hero);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmHero) return;
+        const hero = deleteConfirmHero;
+
+        try {
+            setDeletingId(hero.id);
+            const response = await fetch(
+                `${API_BASE_URL}/hero/${hero.id}`,
+                {
+                    method: "DELETE",
+                }
+            );
+
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(
+                    result.detail || "Failed to delete hero image"
+                );
+            }
+
+            setHeroes((prev) =>
+                prev.filter((item) => item.id !== hero.id)
+            );
+            setDeleteConfirmHero(null);
+            showDelete("Hero image deleted successfully.");
+        } catch (error) {
+            console.error("Error deleting hero image:", error);
+            showError(error.message || "Failed to delete hero image.");
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    return (
+        <div className="w-full">
+            {/* --------------------------------
+          TOP ACTION
+      -------------------------------- */}
+            <div className="mb-6 flex items-center justify-end">
+                <button
+                    type="button"
+                    onClick={openModal}
+                    className="inline-flex h-10 items-center rounded-lg bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700"
+                >
+                    Add Image
+                </button>
+            </div>
+
+            {/* --------------------------------
+          TABLE
+      -------------------------------- */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="w-full border-collapse">
+                    <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50">
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                ID
+                            </th>
+
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Section Name
+                            </th>
+
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Image
+                            </th>
+
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Alt Text
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td
+                                    colSpan={5}
+                                    className="px-6 py-16 text-center text-sm text-slate-500"
+                                >
+                                    Loading...
+                                </td>
+                            </tr>
+                        ) : heroes.length === 0 ? (
+                            <tr>
+                                <td
+                                    colSpan={5}
+                                    className="px-6 py-16 text-center"
+                                >
+                                    <div className="flex flex-col items-center justify-center">
+                                        <p className="text-sm font-medium text-slate-500">
+                                            No records found
+                                        </p>
+
+                                        <button
+                                            type="button"
+                                            onClick={openModal}
+                                            className="mt-3 text-sm font-medium text-blue-600 transition hover:text-blue-700"
+                                        >
+                                            Add Record
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : (
+                            heroes.map((hero) => (
+                                <tr
+                                    key={hero.id}
+                                    className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
+                                >
+                                    <td className="px-6 py-4 text-sm text-slate-700">
+                                        {hero.id}
+                                    </td>
+
+                                    <td className="px-6 py-4 text-sm text-slate-700">
+                                        {hero.section_name || "-"}
+                                    </td>
+
+                                    <td className="px-6 py-4">
+                                        <div className="h-16 w-28 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                                            <img
+                                                src={`${API_BASE_URL}/${String(hero.image_url || "").replace(/^\/+/, "")}`}
+                                                alt={hero.alt_text || "Hero image"}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </div>
+                                    </td>
+
+                                    <td className="px-6 py-4 text-sm text-slate-700">
+                                        {hero.alt_text || "-"}
+                                    </td>
+
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => openEditModal(hero)}
+                                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-blue-600"
+                                            >
+                                                Edit
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDelete(hero)}
+                                                className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* --------------------------------
+          ADD IMAGE MODAL
+      -------------------------------- */}
+            {showModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                            <div>
+                                <h2 className="text-lg font-semibold text-[#17212f]">
+                                    {editingHero ? "Edit Hero Image" : "Add Hero Image"}
+                                </h2>
+                                <p className="mt-1 text-xs text-slate-400">
+                                    {editingHero
+                                        ? "Update the hero image details"
+                                        : "Add an image to a website section"}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={closeModal}
+                                disabled={saving}
+                                className="text-2xl leading-none text-slate-400 transition hover:text-slate-600 disabled:cursor-not-allowed"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {/* Modal Form */}
+                        <form onSubmit={handleSubmit}>
+                            <div className="space-y-5 px-6 py-6">
+                                <div>
+                                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                                        Select Section
+                                    </label>
+
+                                    <select
+                                        value={formData.section_name}
+                                        onChange={(e) =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                section_name: e.target.value,
+                                            }))
+                                        }
+                                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500"
+                                        required
+                                    >
+                                        <option value="">Select Section</option>
+
+                                        {sections.map((section) => (
+                                            <option
+                                                key={section.key}
+                                                value={section.key}
+                                            >
+                                                {section.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Image */}
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Image
+                                    </label>
+
+                                    <input
+                                        type="file"
+                                        accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                                        onChange={handleImageChange}
+                                        className="block w-full cursor-pointer rounded-lg border border-slate-300 text-sm text-slate-500 file:mr-4 file:border-0 file:bg-slate-100 file:px-4 file:py-3 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                                        required={!editingHero}
+                                    />
+
+                                    <p className="mt-2 text-xs text-slate-400">
+                                        PNG, JPG, JPEG or WEBP • 16:9 ratio • Maximum 100 KB
+                                    </p>
+
+                                    {imageError && (
+                                        <p className="mt-2 text-xs font-medium text-red-500">
+                                            {imageError}
+                                        </p>
+                                    )}
+
+                                    {/* Preview */}
+                                    {preview && (
+                                        <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
+                                            <img
+                                                src={preview}
+                                                alt="Preview"
+                                                className="h-40 w-full object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Alt Text */}
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                                        Alt Text
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="alt_text"
+                                        value={formData.alt_text}
+                                        onChange={handleChange}
+                                        placeholder="Enter image alt text"
+                                        className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                                <button
+                                    type="button"
+                                    onClick={closeModal}
+                                    disabled={saving}
+                                    className="h-10 rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {saving
+                                        ? "Saving..."
+                                        : editingHero
+                                            ? "Save Changes"
+                                            : "Add Image"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            <ConfirmDialog
+                open={Boolean(deleteConfirmHero)}
+                title="Delete hero image?"
+                message={
+                    deleteConfirmHero
+                        ? `Are you sure you want to delete the hero image for "${deleteConfirmHero.section_name}"?`
+                        : "Are you sure you want to delete this?"
+                }
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+                onConfirm={confirmDelete}
+                onCancel={() => {
+                    if (!deletingId) setDeleteConfirmHero(null);
+                }}
+                loading={Boolean(deletingId)}
+                danger
+            />
+        </div>
+    );
+};
+
+export default HeroPage;
