@@ -134,7 +134,7 @@ const Contact = () => {
 
       setSuccessMessage(
         result.message ||
-          "Your message has been received. Our team will respond shortly."
+          "Your message has been received. A confirmation email will be sent to your inbox shortly. Our team will respond soon."
       );
       setReferenceId(result.reference_id || "");
       setFormData(initialForm);
