@@ -69,6 +69,6 @@ def submit_contact(
 
     return ContactResponse(
         success=True,
-        message="Your message has been received. Our team will respond shortly.",
+        message="Your message has been received. A confirmation email will be sent to your inbox shortly. Our team will respond soon.",
         reference_id=contact.reference_id,
     )
