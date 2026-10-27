@@ -8,7 +8,6 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from pathlib import Path
-from urllib.parse import urlparse
 
 from Model.notification_model import EmailOutbox
 
@@ -29,7 +28,7 @@ def first_name(name):
 
 
 def money(amount):
-    return f"\${float(amount or 0):,.2f}"
+    return "$" + f"{float(amount or 0):,.2f}"
 
 
 def queue_email(db, template, recipient, props, event_key, delay=None):
