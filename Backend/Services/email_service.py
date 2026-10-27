@@ -1,11 +1,14 @@
-"""Queue mail in the caller's transaction; render React templates only on the server."""
+"""Transactional email outbox and SMTP delivery for Prism emails."""
 import json
 import logging
 import os
+import smtplib
 import subprocess
 from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
+from email.utils import make_msgid
 from pathlib import Path
-from urllib.request import Request, urlopen
+from urllib.parse import urlparse
 
 from Model.notification_model import EmailOutbox
 
@@ -58,16 +61,61 @@ def render_email(template, props):
     result = subprocess.run(
         [os.getenv("NODE_BINARY", "node"), str(renderer)],
         input=json.dumps({"template": template, "props": props, "siteUrl": site_url(),
-                          "supportEmail": os.getenv("SUPPORT_EMAIL", "support@prisimwellness.com")}),
+                          "supportEmail": os.getenv("SUPPORT_EMAIL", "info@prisimwellness.com")}),
         text=True, capture_output=True, timeout=30, check=True,
     )
     return json.loads(result.stdout)
 
 
+def _send_smtp_email(recipient, rendered):
+    """Send a rendered message through the mailbox's configured SMTP server."""
+    host = os.getenv("SMTP_HOST", "").strip()
+    username = os.getenv("SMTP_USERNAME", "").strip()
+    password = os.getenv("SMTP_PASSWORD", "")
+    sender = os.getenv("EMAIL_FROM", "").strip()
+    if not all((host, username, password, sender)):
+        raise RuntimeError(
+            "SMTP is not configured. Set SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, and EMAIL_FROM."
+        )
+
+    port = int(os.getenv("SMTP_PORT", "587"))
+    use_ssl = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
+    use_starttls = os.getenv("SMTP_USE_STARTTLS", "true").lower() == "true"
+    timeout = float(os.getenv("SMTP_TIMEOUT", "20"))
+
+    message = EmailMessage()
+    message["From"] = sender
+    message["To"] = recipient
+    message["Reply-To"] = os.getenv("SUPPORT_EMAIL", username).strip()
+    message["Subject"] = rendered["subject"]
+    message["Message-ID"] = make_msgid(domain=urlparse(f"mailto:{username}").path.split("@")[-1] or None)
+    message.set_content(rendered.get("text") or "Thank you for contacting Prism Wellness.")
+    message.add_alternative(rendered["html"], subtype="html")
+
+    if use_ssl:
+        with smtplib.SMTP_SSL(host, port, timeout=timeout) as server:
+            server.login(username, password)
+            server.send_message(message)
+    else:
+        with smtplib.SMTP(host, port, timeout=timeout) as server:
+            server.ehlo()
+            if use_starttls:
+                server.starttls()
+                server.ehlo()
+            server.login(username, password)
+            server.send_message(message)
+
+    return message["Message-ID"]
+
+
 def deliver_pending(db, limit=20):
-    """Row locks serialize workers; the provider key covers a crash after sending."""
-    if not os.getenv("RESEND_API_KEY") or not os.getenv("EMAIL_FROM"):
+    """Deliver queued messages with retry/backoff after SMTP or rendering failures."""
+    smtp_configured = all(os.getenv(key) for key in (
+        "SMTP_HOST", "SMTP_USERNAME", "SMTP_PASSWORD", "EMAIL_FROM"
+    ))
+    if not smtp_configured:
         return 0
+
     sent = 0
     for _ in range(limit):
         row = (db.query(EmailOutbox).filter(
@@ -78,14 +126,7 @@ def deliver_pending(db, limit=20):
             break
         try:
             rendered = render_email(row.template, json.loads(row.props))
-            payload = {"from": os.environ["EMAIL_FROM"], "to": [row.recipient],
-                       "reply_to": os.getenv("SUPPORT_EMAIL", "support@prisimwellness.com"), **rendered}
-            req = Request("https://api.resend.com/emails", data=json.dumps(payload).encode(),
-                          headers={"Authorization": f"Bearer {os.environ['RESEND_API_KEY']}",
-                                   "Content-Type": "application/json", "User-Agent": "Prism/1.0",
-                                   "Idempotency-Key": f"prism/{row.event_key}"})
-            with urlopen(req, timeout=20) as response:
-                row.provider_id = json.load(response).get("id")
+            row.provider_id = _send_smtp_email(row.recipient, rendered)
             row.status = "sent"
             row.sent_at = utcnow()
             row.props = "{}"
