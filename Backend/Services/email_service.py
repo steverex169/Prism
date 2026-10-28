@@ -61,7 +61,8 @@ def render_email(template, props):
         [os.getenv("NODE_BINARY", "node"), str(renderer)],
         input=json.dumps({"template": template, "props": props, "siteUrl": site_url(),
                           "supportEmail": os.getenv("SUPPORT_EMAIL", "support@prisimwellness.com")}),
-        text=True, capture_output=True, timeout=30, check=True,
+        text=True, encoding="utf-8", errors="replace",
+        capture_output=True, timeout=30, check=True,
     )
     return json.loads(result.stdout)
 
@@ -145,6 +146,6 @@ def deliver_pending(db, limit=20):
             row.available_at = utcnow() + timedelta(seconds=min(3600, 30 * 2 ** min(row.attempts, 7)))
             if row.attempts >= 12:
                 row.status = "failed"
-            logger.warning("Email outbox %s failed (%s)", row.id, row.last_error)
+            logger.exception("Email outbox %s failed (%s): %s", row.id, row.last_error, error)
         db.commit()
     return sent
