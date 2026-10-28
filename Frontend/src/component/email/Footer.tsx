@@ -18,6 +18,7 @@ export function Footer({
   year = new Date().getFullYear(),
 }: FooterProps) {
   const link: React.CSSProperties = { color: colors.accentLight, textDecoration: 'none' };
+  const shopUrl = new URL('/catalog', brand.siteUrl).toString();
   const dot = <span style={{ color: colors.footerDot }}>{`${NBSP}${NBSP}·${NBSP}${NBSP}`}</span>;
 
   return (
@@ -50,7 +51,7 @@ export function Footer({
       </div>
 
       <div className="sans" style={{ fontFamily: fonts.sans, fontSize: 11, lineHeight: '11px', letterSpacing: 2, paddingTop: 28 }}>
-        <a href={`${brand.siteUrl}catalog`} style={link}>SHOP</a>
+        <a href={shopUrl} style={link}>SHOP</a>
         {dot}
         <a href={accountUrl} style={link}>ACCOUNT</a>
         {dot}
