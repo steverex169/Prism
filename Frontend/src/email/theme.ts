@@ -24,5 +24,5 @@ export const brand: { name: string; siteUrl: string; accountUrl: string; support
   name: 'Prisim Wellness',
   siteUrl: 'https://prisimwellness.com/',
   accountUrl: 'https://prisimwellness.com/account',
-  supportEmail: 'support@prisimwellness.com',
+  supportEmail: 'info@prisimwellness.com',
 };
