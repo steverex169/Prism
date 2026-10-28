@@ -50,7 +50,7 @@ export function Footer({
       </div>
 
       <div className="sans" style={{ fontFamily: fonts.sans, fontSize: 11, lineHeight: '11px', letterSpacing: 2, paddingTop: 28 }}>
-        <a href={brand.siteUrl} style={link}>SHOP</a>
+        <a href={`${brand.siteUrl}catalog`} style={link}>SHOP</a>
         {dot}
         <a href={accountUrl} style={link}>ACCOUNT</a>
         {dot}
