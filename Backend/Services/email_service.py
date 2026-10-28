@@ -60,7 +60,7 @@ def render_email(template, props):
     result = subprocess.run(
         [os.getenv("NODE_BINARY", "node"), str(renderer)],
         input=json.dumps({"template": template, "props": props, "siteUrl": site_url(),
-                          "supportEmail": os.getenv("SUPPORT_EMAIL", "support@prisimwellness.com")}),
+                          "supportEmail": os.getenv("SUPPORT_EMAIL", "info@prisimwellness.com")}),
         text=True, encoding="utf-8", errors="replace",
         capture_output=True, timeout=30, check=True,
     )
@@ -95,7 +95,7 @@ def _send_smtp(row, rendered, settings):
     message["From"] = sender
     message["To"] = row.recipient
     message["Subject"] = rendered["subject"]
-    message["Reply-To"] = os.getenv("SUPPORT_EMAIL", "support@prisimwellness.com")
+    message["Reply-To"] = os.getenv("SUPPORT_EMAIL", "info@prisimwellness.com")
     message.set_content(rendered.get("text") or "Thank you for contacting Prisim Wellness.")
     message.add_alternative(rendered["html"], subtype="html")
 
