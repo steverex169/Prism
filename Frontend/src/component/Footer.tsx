@@ -192,7 +192,7 @@ const Footer = () => {
           <div>
             <div className="mb-5 inline-flex flex-col">
               <span className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
-                Prisim Wellness
+                Prism Wellness
               </span>
             </div>
 
