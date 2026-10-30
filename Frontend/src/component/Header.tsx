@@ -208,7 +208,7 @@ const Header = () => {
                 lg:text-xl
               "
             >
-              Prisim Wellness
+              Prism Wellness
             </Link>
 
             <nav
